@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////
-/// ©Mike Brown Productions Limited, 2022
+/// Mike Brown, 2022
 ///
 /// Filename:	StreamTest.h
 /// Created:	16/8/2022
