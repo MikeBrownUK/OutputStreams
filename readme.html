@@ -7,7 +7,7 @@
 	<META NAME="AUTHOR" CONTENT="Mike ">
 	<META NAME="CREATED" CONTENT="20220909;20194854">
 	<META NAME="CHANGEDBY" CONTENT="Mike ">
-	<META NAME="CHANGED" CONTENT="20220909;20390148">
+	<META NAME="CHANGED" CONTENT="20220909;21560516">
 	<STYLE TYPE="text/css">
 	<!--
 		@page { margin: 2cm }
@@ -253,9 +253,9 @@ overhead.</FONT></P>
 <P CLASS="western"><FONT FACE="Verdana, sans-serif">OuputChannels can
 be instanced on a thread's stack or by using C++ 11's </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">thread_local</FONT></CODE><FONT FACE="Verdana, sans-serif">
 if you want to declare a global-scope OutputChannel that all
-functions can see. You should use the second option if you want every
-possible piece of assembler optimised away in a stripped build
-though, thus:</FONT></P>
+</FONT><FONT FACE="Verdana, sans-serif">functions can see. You should
+use the second option if you want every possible piece of assembler
+optimised away in a stripped build though, thus:</FONT></P>
 <PRE CLASS="western"><FONT FACE="Verdana, sans-serif">Option One:</FONT>
 <FONT FACE="Verdana, sans-serif">thread_local OutputChannel&lt; char &gt;( construction params... );</FONT>
 
@@ -331,7 +331,7 @@ constructors above, I provide two other singleton OutputStamp
 classes:</FONT></P>
 <P CLASS="western"><FONT FACE="Verdana, sans-serif">The first is a
 system date &amp; time stamp (with milliseconds also appended):</FONT></P>
-<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">StreamStdOut&lt; char &gt; myStream( &amp;GetDefaultChannelSettings(), nullptr, </FONT><STRONG><FONT FACE="Verdana, sans-serif">SystemTimeStamp&lt; char &gt;::GetInstance() </FONT></STRONG><FONT FACE="Verdana, sans-serif">);</FONT></PRE><P CLASS="western">
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">StreamStdOut&lt; char &gt; myStream( nullptr, </FONT><STRONG><FONT FACE="Verdana, sans-serif">SystemTimeStamp&lt; char &gt;::GetInstance(), </FONT></STRONG><STRONG><FONT FACE="Verdana, sans-serif"><SPAN STYLE="font-weight: normal">&amp;GetDefaultChannelSettings() </SPAN></FONT></STRONG><FONT FACE="Verdana, sans-serif">);</FONT></PRE><P CLASS="western">
 <FONT FACE="Verdana, sans-serif">The second is intended purely as an
 example of an OutputStamp class with a state, one that can write a
 prefix of variable length (up to a maximum length which the
