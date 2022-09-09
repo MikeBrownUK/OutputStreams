@@ -1,0 +1,582 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE></TITLE>
+	<META NAME="GENERATOR" CONTENT="OpenOffice 4.1.7  (Win32)">
+	<META NAME="AUTHOR" CONTENT="Mike ">
+	<META NAME="CREATED" CONTENT="20220909;20194854">
+	<META NAME="CHANGEDBY" CONTENT="Mike ">
+	<META NAME="CHANGED" CONTENT="20220909;20390148">
+	<STYLE TYPE="text/css">
+	<!--
+		@page { margin: 2cm }
+		P { margin-bottom: 0.21cm }
+		P.western { so-language: en-GB }
+		H2 { margin-bottom: 0.21cm }
+		H2.western { so-language: en-GB }
+		H2.cjk { font-family: "SimSun" }
+		H2.ctl { font-family: "Lucida Sans" }
+		H5 { margin-bottom: 0.21cm }
+		H5.western { so-language: en-GB }
+		H5.cjk { font-family: "SimSun" }
+		H5.ctl { font-family: "Lucida Sans" }
+		PRE.western { so-language: en-GB }
+		PRE.cjk { font-family: "NSimSun", monospace }
+		A:link { so-language: zxx }
+		CODE.cjk { font-family: "NSimSun", monospace }
+	-->
+	</STYLE>
+</HEAD>
+<BODY LANG="en-GB" DIR="LTR">
+<P CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=4 STYLE="font-size: 16pt"><B>OutputStreams
+C++ Library</B> </FONT></FONT>
+</P>
+<P CLASS="western"><BR><BR>
+</P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">This page
+contains both an introduction to the use of my library and notes on
+its design. The source code can be obtained from GitHub (user:
+MikeBrownUK, repository: OutputStreams).</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">All code is
+licensed under the MIT with thanks to all I worked with who inspired
+its evolution in some way (see my blog for further details).</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">As background
+reading for those not terribly familiar with the history of character
+representation on computers and why it often makes developers want to
+cry, then a good place to start would be </FONT><A HREF="https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/"><FONT FACE="Verdana, sans-serif">Joel
+Spolsky's excellent article</FONT></A><FONT FACE="Verdana, sans-serif">
+from almost twenty years ago.</FONT></P>
+<H2 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=3>Getting
+Started</FONT></FONT></H2>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Here's the
+expurgated guide to using the OutputStreams Library. For a better
+idea of the class relationships, I recommend you refer to the design
+description that follows this introduction and familiarise yourself
+with the source files.</FONT></P>
+<H5 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=3>Test
+Project</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">A CMake
+googletest project is included in the source package. To build the
+test program, you will need to download and install googletest and
+set GOOGLE_TEST_PATH to point to that directory (or you could edit
+all the paths in the CMakeLists.txt manually - your choice).
+CMakeSettings.json is also provided for Visual Studio users with
+Windows and Linux debug and release sample target configurations.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">To use the source
+with an IDE and project/makefile of your choosing, add the
+</FONT><EM><FONT FACE="Verdana, sans-serif">OutputStreams</FONT></EM><FONT FACE="Verdana, sans-serif">,
+</FONT><EM><FONT FACE="Verdana, sans-serif">Utilities</FONT></EM><FONT FACE="Verdana, sans-serif">
+and appropriate googletest directories to your include paths and all
+.cpp files within </FONT><EM><FONT FACE="Verdana, sans-serif">OutputStreams</FONT></EM><FONT FACE="Verdana, sans-serif">
+and </FONT><EM><FONT FACE="Verdana, sans-serif">Utilities</FONT></EM><FONT FACE="Verdana, sans-serif">
+to your build list alongside the two mandatory googletest source
+files (</FONT><EM><FONT FACE="Verdana, sans-serif">gtest-all.cc</FONT></EM><FONT FACE="Verdana, sans-serif">
+and </FONT><EM><FONT FACE="Verdana, sans-serif">gtest_main.cc</FONT></EM><FONT FACE="Verdana, sans-serif">)
+and you should be good to go. I recommend you look at the
+CMakeLists.txt file regardless to note the compiler preprocessor
+defines. For Linux you will also need to link to pthreads.</FONT></P>
+<H5 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=4 STYLE="font-size: 16pt">Using
+OutputStreams</FONT></FONT></H5>
+<P CLASS="western"><BR><BR>
+</P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">#include &quot;StreamAndChannelAliases.h&quot;</FONT>
+
+<FONT FACE="Verdana, sans-serif">using namespace mbp::streams;</FONT></PRE><H5 CLASS="western">
+<FONT FACE="Verdana, sans-serif"><FONT SIZE=3>OutputStream</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Create an
+</FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">OutputStream</FONT></CODE><FONT FACE="Verdana, sans-serif">.
+The easiest way is to use one of the predefined aliases I supply in
+the above file, specifying character width for the stream:</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">StreamStdOut&lt; char &gt; myStream;</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">This creates an OutputStream of char
+width that writes to std::cout. There are default construction
+parameters, so what you are actually specifying above is:</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">StreamStdOut&lt; char &gt; myStream( nullptr, OutputStamp::GetDefaultInstance(), &amp;GetDefaultChannelSettings() );</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">The first parameter is not used by
+this stream type - it is just a pointer to a narrow string used to
+carry initialisation values to the </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">OutputTarget</FONT></CODE><FONT FACE="Verdana, sans-serif">
+the OutputStream flushes to (for a file stream this is the name of
+the file to create). </FONT>
+</P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">The second
+parameter is a reference to an </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">OutputStamp</FONT></CODE><FONT FACE="Verdana, sans-serif">
+class - these classes are used to add prefixes to entries sent to the
+stream. The default is an empty singleton that does nothing but
+satisfy the minimum required interface.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">The final
+parameter is a pointer to a </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">StreamSetting</FONT></CODE><CODE CLASS="western"><EM><FONT FACE="Verdana, sans-serif">s</FONT></EM></CODE><FONT FACE="Verdana, sans-serif">
+structure that contains initialisation values for message priority
+and filtering - details later.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">You can use this
+stream as you would std::cout:</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">myStream &lt;&lt; &quot;some text followed by a number... &quot; &lt;&lt; 12 &lt;&lt; endl;</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">Note the use of </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">endl</FONT></CODE><FONT FACE="Verdana, sans-serif">
+</FONT>
+</P>
+<P CLASS="western"><EM><FONT FACE="Verdana, sans-serif">std::endl
+</FONT></EM><FONT FACE="Verdana, sans-serif">would work in this
+instance, but I encourage you to use the version from my namespace as
+std::endl throws exceptions on Ubuntu Linux when put into streams of
+char16_t and char32_t type (at least with G++ version 9.4.0)</FONT></P>
+<H5 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=3>Message
+Filtering</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Why bother with a
+library when you could use std::cout? Allow me to introduce runtime
+message filtering:</FONT></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">myStream &lt;&lt; Filter( 10 );</FONT>
+<FONT FACE="Verdana, sans-serif">myStream &lt;&lt; DefaultPriority( 5 );</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">Messages with a </FONT><EM><FONT FACE="Verdana, sans-serif">Priority</FONT></EM><FONT FACE="Verdana, sans-serif">
+less than or equal to the </FONT><EM><FONT FACE="Verdana, sans-serif">Filter</FONT></EM><FONT FACE="Verdana, sans-serif">
+value are output to the final OutputTarget. Messages with a priority
+higher than the </FONT><EM><FONT FACE="Verdana, sans-serif">Filter</FONT></EM><FONT FACE="Verdana, sans-serif">
+are discarded. Lower priority value means higher message priority (0
+= highest): after consideration I reasoned that large numeric values
+are less meaningful, especially when you aren't sure of the
+underlying type (currently a uint8_t).</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">You specify
+per-message priority using the </FONT><EM><FONT FACE="Verdana, sans-serif">Priority</FONT></EM><FONT FACE="Verdana, sans-serif">
+stream manipulator:</FONT></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">myStream &lt;&lt; Priority( 11 ) &lt;&lt; &quot;This text WILL NOT APPEAR in the log as the Priority value injected is higher than the current filter (10).&quot; &lt;&lt; endl;</FONT>
+
+<FONT FACE="Verdana, sans-serif">myStream &lt;&lt; &quot;This text WILL APPEAR as the priority has now been reset to the last set default (5) during the flush of the previous output&quot; &lt;&lt; endl;</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">Member functions are also directly
+accessible in the stream object:</FONT></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">myStream.SetFilter( SettingsTypenewValue );</FONT>
+<FONT FACE="Verdana, sans-serif">myStream.SetDefaultPriority( SettingsType newValue );</FONT>
+<FONT FACE="Verdana, sans-serif">myStream.SetPriority( SettingsType newValue );</FONT></PRE><P CLASS="western">
+<EM><FONT FACE="Verdana, sans-serif">note that SettingsType is,
+currently, just an alias for the aforementioned uint8_t</FONT></EM><FONT FACE="Verdana, sans-serif">.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">A final member
+function and corresponding manipulator control enabling and disabling
+a stream's output entirely:</FONT></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">mySteam.Enable( 0 );</FONT>
+<FONT FACE="Verdana, sans-serif">myStream &lt;&lt; Enable( 1 );</FONT></PRE><H5 CLASS="western">
+<FONT FACE="Verdana, sans-serif"><FONT SIZE=3>String Conversion</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Optional string
+type conversion.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">C++ '11 gave us
+two new character types and various new string encodings but, despite
+these additions, when you send a non-native string to a Standard
+Library stream (say a wchar_t string to a char stream) with operator
+&lt;&lt; it is caught by a generic pointer handler so your non-native
+(to the stream) string is almost always output as a numeric value
+rather than a string of text. </FONT>
+</P>
+<P CLASS="western"><EM><FONT FACE="Verdana, sans-serif">Additionally,
+conversion of many types into strings isn't supported with char32_t
+and char16_t streams: Microsoft's Standard Library implementation
+just produces an error relating to std::numpunct&lt;_Elem&gt;::id
+whilst G++ and Linux just seem to silently pretend that you never
+attempted to write a numeric to the stream because whilst your code
+will compile and run you certainly won't find that numeric in the
+stream buffer. Perhaps I shouldn't be surprised though, doesn't look
+like my compiler has been changed for six years:</FONT></EM></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin&gt;</FONT><STRONG><FONT FACE="Verdana, sans-serif">dir cl.exe</FONT></STRONG>
+
+<FONT FACE="Verdana, sans-serif">Volume in drive C is Windows-SSD</FONT>
+<FONT FACE="Verdana, sans-serif">Volume Serial Number is 569A-00CC</FONT>
+
+<FONT FACE="Verdana, sans-serif">Directory of C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin </FONT><STRONG><FONT FACE="Verdana, sans-serif">25/08/2016</FONT></STRONG><FONT FACE="Verdana, sans-serif"> 23:13 190,600 cl.exe 1 File(s) 190,600 bytes 0 Dir(s) 194,457,616,384 bytes free</FONT>
+
+<FONT FACE="Verdana, sans-serif">C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin&gt;cl</FONT>
+<FONT FACE="Verdana, sans-serif">Microsoft (R) C/C++ Optimizing Compiler Version 19.00.24215.1 for x86</FONT>
+<FONT FACE="Verdana, sans-serif">Copyright (C) Microsoft Corporation.  All rights reserved.</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">Anyway, I decided to catch all three
+character types foreign to a stream's internal type and perform
+integral narrowing or widening rather than just display a numeric
+pointer value as the Standard Library currently does (when it works).
+This conversion is obviously not always particularly successful when
+narrowing large codepoints, but I felt it a better fit for the likely
+usage of this library. This narrowing/widening behaviour is always on
+but I may move this to a preprocessor define at some point - it is
+easy enough to achieve yourself should you wish.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Secondly, I
+wanted to be able to convert strings into the stream's closest UTF
+representation, also via pointer catching functions. This wasn't
+straightforward and of course it isn't always terribly useful
+considering that the underlying character type of an interface like a
+terminal is often just single byte per character, so recoded strings
+are still very much dependent on OutputTarget support. This feature
+does perform well where files are the stream target though as I
+perform the file writing in the example OutputTarget classes via
+kernel OS calls.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Some assumptions
+had to be made with string conversion - not least because of
+differences between platforms (wide characters having different
+widths on Windows and Linux for example). </FONT>
+</P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">If you want to
+use converting streams then I have created aliases that use the
+suffix 'Converting', thus:</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">StreamStdOutConverting&lt; char &gt; myStream;</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">See &quot;StreamAndChannelAliases.h&quot;
+for the full template syntax.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">OutputChannels
+(see next section) also come in 'converting' and 'non-converting'
+flavours and the two types can happily share the same OutputStream.</FONT></P>
+<P CLASS="western"><EM><FONT FACE="Verdana, sans-serif">Note that
+string conversions are only available via operator &lt;&lt; presently
+- I have no intention just yet of implementing a full basic_ostream&lt;&gt;
+member function interface.</FONT></EM></P>
+<H5 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=3>OutputChannel</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">An OutputChannel
+is an additional object required if more than one thread needs to
+access the OutputStream concurrently. They require you to specify an
+ID, which you could use to identify separate areas of program
+functionality. Each ID gets its own StreamSettings so they don't
+interfere with channels using different IDs on the same stream(s).
+Channels use their own buffers so can do most of their work without
+any synchronisation penalty. They are only a touch more involved to
+setup: they require a StreamList (just an alias for a std::vector of
+pointers to the OutputStreams they are to write to) at construction,
+e.g.:</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">OuputChannel&lt; char &gt; myChannel( 0, { &amp;myStream }, true );</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">Again, the above is shorthand for a
+constructor that is using some default parameters. The full syntax
+is:</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">OutputChannel( int channelID_, std::vector&lt; BasicStream_t&lt; type &gt; * &gt; const&amp; streams_, bool isMultiThreadChannel_ = true,  OutputStamp &amp; stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initSettings_ = &amp;GetDefaultChannelSettings() )</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">The example creates an OutputChannel
+with an ID of 0 - ints are used to facilitate the use of enums for
+channel IDs - that attaches to the myStream object (from earlier in
+the example text) and specifies that the channel will be used by
+multiple threads. The final two settings optionally specify an
+OutputStamp instance to use for message prefixing and custom initial
+StreamSettings for the channel.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">If you don't need
+multiple thread safety for a particular OutputStream but still want
+the benefits of multiple channels (independent filtering despite
+'many writing to one or more') then set the </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">isMultiThreadChannel_</FONT></CODE><FONT FACE="Verdana, sans-serif">
+parameter in the constructor to </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">false</FONT></CODE><FONT FACE="Verdana, sans-serif">
+as this will use an optimised buffer without the synchronisation
+overhead.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">OuputChannels can
+be instanced on a thread's stack or by using C++ 11's </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">thread_local</FONT></CODE><FONT FACE="Verdana, sans-serif">
+if you want to declare a global-scope OutputChannel that all
+functions can see. You should use the second option if you want every
+possible piece of assembler optimised away in a stripped build
+though, thus:</FONT></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">Option One:</FONT>
+<FONT FACE="Verdana, sans-serif">thread_local OutputChannel&lt; char &gt;( construction params... );</FONT>
+
+<FONT FACE="Verdana, sans-serif">Option Two:</FONT>
+<FONT FACE="Verdana, sans-serif">TLS_OUTPUTCHANNEL&lt; char &gt;( construction params... );</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">and of course with an </FONT><CODE CLASS="western"><FONT FACE="Verdana, sans-serif">extern</FONT></CODE><FONT FACE="Verdana, sans-serif">
+prefix if you want to declare in a header.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">This is the one
+place I had to relent on my goal and still use a preprocessor define
+to ensure removal of all code because of the way Microsoft's compiler
+(and possibly others) handle </FONT><EM><FONT FACE="Verdana, sans-serif">thread_local
+</FONT></EM><FONT FACE="Verdana, sans-serif">storage. The tiny bit of
+TLS disassembly code generated probably won't bother most people, but
+it did me.</FONT></P>
+<P CLASS="western"><EM><FONT FACE="Verdana, sans-serif">Note that if
+you use the thread_local option to define your OutputChannel at
+global scope then you will likely see some unreleased memory warnings
+if you use the 'on exit' heap-checking functions provided by the
+Windows system libs. This is because some threads won't have
+destroyed their copy of the OutputChannel, and the buffer it creates,
+before the main thread calls the heap check function - you can verify
+that all is actually OK by hiding the OutputChannel in a function
+that returns a reference to a static thread_local.</FONT></EM></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">When an
+OutputChannel attaches to an OutputStream at construction, any
+OutputStamp specified in that stream's constructor will no longer be
+used. You </FONT><EM><FONT FACE="Verdana, sans-serif">must</FONT></EM><FONT FACE="Verdana, sans-serif">
+specify an OutputStamp class instance for the channel if you want
+message prefixing to work with channels. Again, this is an efficiency
+optimisation as all message prefixing is performed in local buffers
+to minimise contention.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Each
+OutputChannel can attach to multiple OutputStreams. I have set a
+somewhat arbitrary maximum of 32 individual </FONT><EM><FONT FACE="Verdana, sans-serif">shared</FONT></EM><FONT FACE="Verdana, sans-serif">
+stream objects in the source - you can have as many non-shared
+streams as you wish. Maximum number of OutputChannels also has a cap,
+64 at present. Tweak away if needed...</FONT></P>
+<P CLASS="western"><EM><FONT FACE="Verdana, sans-serif">Remember that
+each OutputChannel ID has its own StreamSettings structure so
+manipulators and member function calls used will only effect that
+channel and not any other channel(s) attached to the same
+OutputStream(s) -providing you give your channels different IDs.</FONT></EM></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">If you require
+UTF string conversion when using OutputChannels then note that the
+appropriate base class template must be specified for the channel
+instance.</FONT></P>
+<H5 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=3>Example
+OutputStreams</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">All example
+OutputStream types (actually OutputStream_t classes taking an
+OutputTarget_t template parameter) have the following shorter aliases
+defined:</FONT></P>
+<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">StreamFile&lt; T_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">StreamStdOut&lt; T_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">StreamConsole&lt; T_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">StreamDevStudio&lt; T_ &gt;</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">The latter two being Windows only -
+you can use a StreamConsole&lt; wchar_t &gt; for UTF16 Unicode output
+to your Win32 console. If your application is a Windows GUI
+application then a console window will be created alongside.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Streams are safe
+and reliable with char and wchar_t types but char16_t and char32_t
+support is still somewhat flaky - mainly because those types don't
+cooperate with the existing Standard Library implementations I've
+tried or indeed with many system API output functions or devices.</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Note that if you
+want StreamStdOut to go to std::wcout instead of std::cout on
+platforms that support it, you must have USE_STD_WCOUT defined.</FONT></P>
+<H5 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=3>OutputStamp</FONT></FONT></H5>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">Aside from the
+default &quot;do nothing&quot; message prefixer seen in the
+constructors above, I provide two other singleton OutputStamp
+classes:</FONT></P>
+<P CLASS="western"><FONT FACE="Verdana, sans-serif">The first is a
+system date &amp; time stamp (with milliseconds also appended):</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">StreamStdOut&lt; char &gt; myStream( &amp;GetDefaultChannelSettings(), nullptr, </FONT><STRONG><FONT FACE="Verdana, sans-serif">SystemTimeStamp&lt; char &gt;::GetInstance() </FONT></STRONG><FONT FACE="Verdana, sans-serif">);</FONT></PRE><P CLASS="western">
+<FONT FACE="Verdana, sans-serif">The second is intended purely as an
+example of an OutputStamp class with a state, one that can write a
+prefix of variable length (up to a maximum length which the
+OutputStamp class must make available to its clients):</FONT></P>
+<PRE CLASS="western" STYLE="margin-bottom: 0.5cm"><FONT FACE="Verdana, sans-serif">LineStamp&lt; char &gt;::GetInstance()</FONT></PRE>
+<HR>
+<H2 CLASS="western"><FONT FACE="Verdana, sans-serif"><FONT SIZE=4 STYLE="font-size: 16pt">Design</FONT></FONT></H2>
+<P CLASS="western"><A NAME="block-1c0864ed-50ec-409b-bbfa-7572dd31c364"></A>
+<FONT FACE="Verdana, sans-serif">Here's where I try to explain the
+design in a little more detail. The easiest route is probably the one
+that starts with the OutputTarget and works back to the streams and
+channels that write to it.</FONT></P>
+<P CLASS="western"><A NAME="block-74c0c1ba-b58b-417c-aee9-97dca4e7aa35"></A>
+<FONT FACE="Verdana, sans-serif">Here's a link to the larger version
+of my diagram showing the class relationships, with apologies for any
+UML errors and omissions:</FONT></P>
+<P CLASS="western"><A HREF="outputstreams_uml.jpg" TARGET="_blank"><FONT COLOR="#000080"><IMG SRC="outputstreams_uml_small.jpg" NAME="graphics1" ALIGN=BOTTOM WIDTH=636 HEIGHT=591 BORDER=1></FONT></A>
+</P>
+<H5 CLASS="western"><A NAME="block-ca4a5ec9-fb48-4d5e-863a-eb818c48e868"></A>
+<FONT FACE="Verdana, sans-serif"><FONT SIZE=3>OutputTarget &amp;
+OutputBuffer</FONT></FONT></H5>
+<P CLASS="western"><BR><BR>
+</P>
+<P CLASS="western"><A HREF="outputtargets_uml.jpg" TARGET="_blank"><FONT COLOR="#000080"><IMG SRC="outputtargets_uml_small.jpg" NAME="graphics2" ALT="This image has an empty alt attribute; its file name is outputtargets_uml_small.jpg" ALIGN=BOTTOM WIDTH=769 HEIGHT=340 BORDER=1></FONT></A>
+</P>
+<P CLASS="western"><A NAME="block-2aa7ab6b-e68c-414c-abdc-517bc5cd7fb4"></A>
+<FONT FACE="Verdana, sans-serif">Whilst OutputTarget is shown
+alongside other classes in the diagrams, you will find no abstract
+class or interface definition within the source.</FONT></P>
+<P CLASS="western"><A NAME="block-0741faaf-1cc9-4688-8525-7f229bf53979"></A>
+<EM><FONT FACE="Verdana, sans-serif">My template classes in code
+generally use a '_t' suffix unless they are aliases or, in the case
+of OutputTarget, just a written interface specification. I also tend
+to drop the '_t' when writing about a class from a design perspective
+- apologies if this appears inconsistent. Users will generally use an
+alias class that has no such suffix</FONT></EM></P>
+<P CLASS="western"><A NAME="block-aac9dbfb-867a-4909-883c-c85768d485d9"></A>
+<FONT FACE="Verdana, sans-serif">OutputTargets.h and .cpp contain my
+example classes that satisfy the above interface - all templates
+themselves so they can interface with streams and channels of various
+character widths. An OutputTarget is encapsulated within an
+OutputBuffer via a template parameter:</FONT></P>
+<PRE CLASS="western"><A NAME="block-cb9fd122-b8ea-433c-8e08-f7819a6acdc7"></A><FONT FACE="Verdana, sans-serif">OutputStreams.h</FONT>
+<FONT FACE="Verdana, sans-serif">...</FONT>
+<FONT FACE="Verdana, sans-serif">template &lt;</FONT><STRONG><FONT FACE="Verdana, sans-serif"> typename TARGET_</FONT></STRONG><FONT FACE="Verdana, sans-serif">, typename ELEM_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">class OutputBuffer_t : public BasicBuffer_t&lt; ELEM_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">{</FONT>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+    <STRONG><FONT FACE="Verdana, sans-serif">TARGET_ m_outputInterface;</FONT></STRONG>
+<FONT FACE="Verdana, sans-serif">}</FONT></PRE><P CLASS="western">
+<A NAME="block-771c37f9-1aff-46d4-8520-3dc302c606f7"></A><FONT FACE="Verdana, sans-serif">The
+Output(...) function of the OutputTarget is called during the
+OutputBuffer's implementation of sync()</FONT></P>
+<PRE CLASS="western"><A NAME="block-e813a153-adad-4fdb-a1c3-ae0babf2a4e8"></A><FONT FACE="Verdana, sans-serif">template&lt; typename ELEM_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">class MyOutputTarget</FONT>
+<FONT FACE="Verdana, sans-serif">{</FONT>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+    <STRONG><FONT FACE="Verdana, sans-serif">void Output( ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ );</FONT></STRONG>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+<FONT FACE="Verdana, sans-serif">}</FONT>
+<FONT FACE="Verdana, sans-serif">template &lt; typename TARGET_, typename ELEM_  &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">class OutputBuffer_t : public BasicBuffer_t&lt; ELEM_ &gt;                    </FONT>
+<FONT FACE="Verdana, sans-serif">{</FONT>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual int sync() override</FONT>
+    <FONT FACE="Verdana, sans-serif">{</FONT>
+        <FONT FACE="Verdana, sans-serif">...</FONT>
+        <STRONG><FONT FACE="Verdana, sans-serif">m_outputInterface.Output</FONT></STRONG><FONT FACE="Verdana, sans-serif">( base::pbase() + offset, numCharacters + stampLength, numBytes );</FONT>
+        <FONT FACE="Verdana, sans-serif">...</FONT>
+    <FONT FACE="Verdana, sans-serif">}</FONT>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+<FONT FACE="Verdana, sans-serif">}</FONT></PRE><P CLASS="western">
+<A NAME="block-d53401dd-e595-4573-bbd3-748cba9b6f7c"></A><FONT FACE="Verdana, sans-serif">sync()
+performs the filtering and prefixing legwork before forwarding the
+string to the OutputTarget, presenting it with a string buffer
+pointer along with character and byte counts. The buffer is
+zero-terminated though the terminator is not included in either
+count.</FONT></P>
+<H5 CLASS="western"><A NAME="block-f66a7e6e-c972-42a9-97b7-52f7c43e194c"></A>
+<FONT FACE="Verdana, sans-serif">OutputStream</FONT></H5>
+<P CLASS="western"><A NAME="block-52e07e1f-f60d-4e7f-96f8-d7a2d3608f90"></A>
+<FONT FACE="Verdana, sans-serif">The OutputBuffer is itself a
+template parameter to an OutputStream - the core template class for a
+stream object.</FONT></P>
+<PRE CLASS="western"><A NAME="block-66cebc3b-925d-4b50-925e-4e1de2b3c0f6"></A><FONT FACE="Verdana, sans-serif">template&lt; typename STREAMBASE_, typename TARGET_ &gt;</FONT>
+<STRONG><FONT FACE="Verdana, sans-serif">class OutputStream_t </FONT></STRONG><FONT FACE="Verdana, sans-serif">: public STREAMBASE_</FONT>
+<FONT FACE="Verdana, sans-serif">{</FONT>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+
+    <FONT FACE="Verdana, sans-serif">OutputStream_t( char const * const initString_ = nullptr, OutputStamp &amp; stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initialSettings_ = &amp;GetDefaultChannelSettings() )</FONT>
+
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+
+   <STRONG> <FONT FACE="Verdana, sans-serif">OutputBuffer_t&lt; TARGET_, ELEM_ &gt;</FONT></STRONG><FONT FACE="Verdana, sans-serif"> m_buffer;</FONT>
+
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+
+<FONT FACE="Verdana, sans-serif">};</FONT></PRE><P CLASS="western">
+<A NAME="block-72b7119b-168c-4f89-804d-d414703a7d0c"></A><FONT FACE="Verdana, sans-serif">OutputStream
+derives from BasicStream via the Stream or ConvertingStream template
+class. These two empty classes exist purely to permit text caught by
+various helper functions to be dispatched correctly. </FONT>
+</P>
+<P CLASS="western"><A NAME="block-72b7119b-168c-4f89-804d-d414703a7d0c1"></A>
+<FONT FACE="Verdana, sans-serif">BasicStream extends
+std::basic_ostream with some virtual functions for message filtering,
+a mutex and a flag used to indicate that the stream is in multithread
+mode and connected to upstream OutputChannels.</FONT></P>
+<P CLASS="western"><A NAME="block-f943b550-d9d3-4c71-8459-1a6117274ff2"></A>
+<FONT FACE="Verdana, sans-serif">The OutputStream type is further
+aliased, in StreamAndChannelAliases.h, into helper templates named
+according to their OutputTarget:</FONT></P>
+<PRE CLASS="western"><A NAME="block-63b7950f-f09e-48d1-9bc0-f084aaa4dc46"></A><FONT FACE="Verdana, sans-serif">template&lt; typename T_ &gt;</FONT>
+<FONT FACE="Verdana, sans-serif">using StreamFile = OutputStream_t&lt; Stream_t&lt; T_ &gt;, OutputFile_t&lt; T_ &gt; &gt;;</FONT></PRE><P CLASS="western">
+<A NAME="block-f07f02ff-f838-47b8-b995-54093345eb78"></A><FONT FACE="Verdana, sans-serif">These
+are all contained within a preprocessor block that redirects those
+aliases to a NullStream template class if STREAM_OUTPUT_STRIP is
+defined. NullStream is a dummy class exposing the minimum empty
+function set needed to allow the compiler to optimise stream and
+channel objects out to nothing in release builds along with some
+</FONT><EM><FONT FACE="Verdana, sans-serif">operator &lt;&lt; </FONT></EM><FONT FACE="Verdana, sans-serif">helpers
+to do the same.</FONT></P>
+<P CLASS="western"><A NAME="block-f12a5fc5-6ca8-4e20-9fcd-0769a7db696f"></A>
+<FONT FACE="Verdana, sans-serif">As per the UML and the
+OutputStream_t constructor, an OutputStream uses StreamSettings and
+an OutputStamp.</FONT></P>
+<H5 CLASS="western"><A NAME="block-ad4b443c-6a6e-49bb-8e36-a9a7c995c38b"></A>
+<FONT FACE="Verdana, sans-serif"><FONT SIZE=3>StreamSettings</FONT></FONT></H5>
+<P CLASS="western"><A NAME="block-07b2700b-b8d3-47c2-9262-1bf0c3135db5"></A>
+<FONT FACE="Verdana, sans-serif">The StreamSettings structure holds
+the current runtime filtering flags for the stream. These are:
+Enable, Priority, Default Priority, and Filter. All flags are atomic
+as this structure is also used by OutputChannels which must be
+thread-safe.</FONT></P>
+<P CLASS="western"><A NAME="block-07a617dd-e667-4500-b5ad-acaaa2cbff6b"></A>
+<FONT FACE="Verdana, sans-serif">Enable is a simple on/off for stream
+output, Filter sets a priority cap - messages with priority values
+greater than this filter value are discarded. Default Priority sets
+the priority value for all messages (until changed) and Priority is a
+temporary used to specify Priority only until the next flush() , at
+which time Default Priority is restored.</FONT></P>
+<P CLASS="western"><A NAME="block-352f64bc-5a67-4df0-bd47-dd18d15f3a77"></A>
+<FONT FACE="Verdana, sans-serif">OutputStreams and OutputChannels
+both provide member functions to change these settings and I've
+provided manipulator functors that can be injected into a stream or
+channel directly alongside other content much like other Standard
+Library stream manipulators.</FONT></P>
+<H5 CLASS="western"><A NAME="block-c3d667cb-dbb5-444a-ba38-0025b4a3dbe2"></A>
+<FONT FACE="Verdana, sans-serif"><FONT SIZE=3>OutputStamp</FONT></FONT></H5>
+<P CLASS="western"><A NAME="block-b86c065a-4324-4675-a1a2-26f4fd36e563"></A>
+<FONT FACE="Verdana, sans-serif">This is a message prefixing base
+class used by OutputStreams and OutputChannels to write an optional
+prefix to the front of the buffer before forwarding to an
+OutputTarget.</FONT></P>
+<P CLASS="western"><A NAME="block-14c9aadb-0774-4c7d-93b7-12c59fc224e4"></A>
+<FONT FACE="Verdana, sans-serif">The base class defines the interface
+and provides a singleton instance which is used as a default
+parameter by the constructors of both OutputStream_t and
+OutputChannel_t.</FONT></P>
+<PRE CLASS="western"><A NAME="block-e24fc026-3be8-44c3-a05b-5de8dec67bcf"></A><FONT FACE="Verdana, sans-serif">class OutputStamp</FONT>
+<FONT FACE="Verdana, sans-serif">{</FONT>
+<FONT FACE="Verdana, sans-serif">public:</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual int GetMaxLength() const { return 0; }</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual int GetLength() const { return 0; };</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual int WriteStamp( void * ptr_ = nullptr ) { return 0; }</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual void Lock() {}</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual void Unlock() {}</FONT>
+    <FONT FACE="Verdana, sans-serif">static OutputStamp &amp; GetDummyStamp()</FONT>
+    <FONT FACE="Verdana, sans-serif">{</FONT>
+        <FONT FACE="Verdana, sans-serif">static OutputStamp instance;</FONT>
+        <FONT FACE="Verdana, sans-serif">return instance;</FONT>
+    <FONT FACE="Verdana, sans-serif">}</FONT>
+    <FONT FACE="Verdana, sans-serif">OutputStamp() = default;</FONT>
+    <FONT FACE="Verdana, sans-serif">virtual ~OutputStamp() = default;</FONT>
+<FONT FACE="Verdana, sans-serif">};</FONT></PRE><P CLASS="western">
+<A NAME="block-ba75924f-d479-44a6-91b5-a8595b3a83cf"></A><FONT FACE="Verdana, sans-serif">The
+Lock() and Unlock() functions are called only by OutputChannels when
+running in multithread mode: they call GetLength() and WriteStamp()
+in succession and those two functions need to agree on the character
+length of the next prefix write.</FONT></P>
+<P CLASS="western"><A NAME="block-ab974c29-d03d-4b21-9b3f-0f849fb58588"></A>
+<FONT FACE="Verdana, sans-serif">I have provided two example
+prefixing classes using this base class: SystemTimeStamp and
+LineStamp: both of which are safe for concurrent access of their
+singleton instances. The LineStamp is a very simple example that
+variable length prefixing works. Both example classes are templatised
+to work with different character types and provide singleton
+instances by design only - OutputStamps can be different object
+instances on each thread should you wish, it's all down to your
+design and how and where you construct them.</FONT></P>
+<H5 CLASS="western"><A NAME="block-c21dc9ad-4487-42a7-bd30-cb121ca6c492"></A>
+<FONT FACE="Verdana, sans-serif"><FONT SIZE=3>OutputChannel &amp;
+ChannelBuffer</FONT></FONT></H5>
+<P CLASS="western"><A NAME="block-5eb84dd2-b49c-477e-a0ee-3971f00b7773"></A>
+<FONT FACE="Verdana, sans-serif">OutputChannel is a thread-safe class
+which attaches to one or more OutputStreams. Message construction
+including any prefixing is handled locally until such time as a
+flush() is triggered.</FONT></P>
+<P CLASS="western"><A NAME="block-5364a788-13eb-4485-a516-7f8ffd4c25ba"></A>
+<FONT FACE="Verdana, sans-serif">The OutputChannel class is similar
+to an OutputStream - it derives from BasicStream (and via either
+Stream or ConvertingStream):</FONT></P>
+<PRE CLASS="western"><A NAME="block-089ac5b4-342a-45b5-a394-9fe3f7b89720"></A><FONT FACE="Verdana, sans-serif">template&lt; typename STREAMBASE_ &gt;</FONT>
+<STRONG><FONT FACE="Verdana, sans-serif">class OutputChannel_t </FONT></STRONG><FONT FACE="Verdana, sans-serif">: public STREAMBASE_</FONT>
+<FONT FACE="Verdana, sans-serif">{</FONT>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+<FONT FACE="Verdana, sans-serif">public:</FONT>
+<STRONG><FONT FACE="Verdana, sans-serif">OutputChannel_t( int channelID_, std::vector&lt; BasicStream_t&lt; type &gt; * &gt; const&amp; streams_, bool isMultiThreadChannel_ = true,  OutputStamp &amp; stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initSettings_ = &amp;GetDefaultChannelSettings() )</FONT></STRONG>
+    <FONT FACE="Verdana, sans-serif">...</FONT>
+<FONT FACE="Verdana, sans-serif">};</FONT></PRE><P CLASS="western">
+<A NAME="block-1806eea4-cc77-465e-8ab2-6e3f9144bd70"></A><FONT FACE="Verdana, sans-serif">The
+constructor requires a channel ID, a vector of pointers to one or
+more OutputStream objects that the channel will write to, a
+multi-thread usage flag an optional OutputStamp instance and optional
+non-default StreamSetting values.</FONT></P>
+<P CLASS="western"><A NAME="block-3b03372f-ce22-45fd-8810-5fdacc987135"></A>
+<FONT FACE="Verdana, sans-serif">An OutputChannel creates a
+ChannelBuffer. This buffer derives from std::basic_stringbuf and has
+two specialisations to write to each OutputStream the channel
+attaches to, with and without using mutexes. The specialisation
+chosen depends upon the construction parameter </FONT><EM><FONT FACE="Verdana, sans-serif">isMultiThreadChannel_</FONT></EM></P>
+<P CLASS="western"><A NAME="block-0c5b42b7-212a-4acd-a978-3422f9ad7cc8"></A>
+<FONT FACE="Verdana, sans-serif">OutputChannels also use a group of
+external arrays to control channel initialisation and to hold the
+StreamSettings for each channel ID. This ensures that existing
+channel settings are not reset when a new channel object is
+constructed using an existing channel ID, e.g.: a new system thread
+starting and initialising a global-scope thread_local OutputChannel.
+Also present is a reference count of the number of channels attached
+to each stream so that the stream's buffer is reset correctly once
+the last channel has detached. Most of the work with these data
+occurs in the OutputChannel's constructor and destructor, though the
+OutputStream class destructor also clears its reference count to
+avoid inadvertent access by a channel following its destruction.</FONT></P>
+<P CLASS="western"><A NAME="block-57a0e752-b6da-49bc-9f4a-5baa90785fa3"></A>
+<EM><FONT FACE="Verdana, sans-serif">If you do intend to create and
+destroy many streams and channels that are shared by threads then it
+is advisable to destroy your channel objects before you destroy the
+streams they are attached to - this is because the shared stream
+array lookup table is accessed without the mutex within the
+OutputChannel's sync() function. I felt this a worthwhile caveat
+rather than make that array's elements atomic and incur a performance
+hit - it's a fairly trivial tweak to change to atomics but not one I
+felt was necessary.</FONT></EM></P>
+<P CLASS="western" STYLE="margin-bottom: 0cm"><BR>
+</P>
+</BODY>
+</HTML>
