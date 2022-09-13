@@ -335,6 +335,18 @@ namespace mbp
 			return fnc_( stream_ );
 		}
 
+		// and a customisation of the setw manipulator and caller to ensure code is stripped properly when using NullStream instead of OutputStream or OutputChannel
+#define stdManipOne(manip,fnc)	struct manip { explicit manip( int val_ ) : payload_( val_ ) {} template< typename T_ > T_ & operator()( T_ && strm_ )	{ strm_.fnc( payload_ ); return strm_; } int payload_; };
+
+		stdManipOne( setw, width )
+
+			template< typename ELEM_ >
+		std::basic_ostream< ELEM_ > & operator << ( std::basic_ostream< ELEM_ > & stream_, setw && obj_ )
+		{
+			obj_( stream_ );
+			return stream_;
+		}
+
 		//////////////////////////////////////////////////////////////////////////
 		/// OutputStream and OutputChannel manipulator functors
 		//////////////////////////////////////////////////////////////////////////
@@ -621,13 +633,19 @@ namespace mbp
 			inline void SetPriority( SettingsType dummy_ ) {}
 			inline void SetDefaultPriority( SettingsType dummy_ ) {}
 			inline void SetCap( SettingsType dummy_ ) {}
+			// for common ios_base functions
+			template< typename U_ >
+			inline void imbue( const U_& dummy_ ) {}
+			std::locale getloc() { return std::locale::classic(); }
+			NullStream_t & flush() { return *this; }
+		
 		};
 
 		template< typename T_, typename U_ >
 		inline NullStream_t< T_ > & operator << ( NullStream_t< T_ >& stream_, U_ const & ) { return stream_; }
 
 		template< typename T_, typename U_ >
- 		inline void operator << ( NullStream_t< T_ > & stream_, std::basic_ostream< U_, std::char_traits< U_ > > & ( * )( std::basic_ostream< U_, std::char_traits< U_ > > & ) ) {}
+ 		inline void operator << ( NullStream_t< T_ > & stream_, std::basic_ostream< U_, std::char_traits< U_ > > & ( * )( std::basic_ostream< U_, std::char_traits< U_ > > &) ) {}
 
 		template< typename T_ >
 		inline NullStream_t< T_ > & endl( NullStream_t< T_ > & stream_ )

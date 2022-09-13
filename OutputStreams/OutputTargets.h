@@ -57,11 +57,13 @@ namespace mbp
 				CloseHandle( file );
 #elif defined ( __linux )
 				int desc = open( m_filename.c_str(), O_WRONLY );
+				int numWritten;
 				if ( desc > -1 )
 				{
 					lseek( desc, 0, SEEK_END );
-					write( desc, output_, numBytes_ );
-					close( desc );
+					numWritten = write( desc, output_, numBytes_ );
+					if( numWritten > -1 )
+						close( desc );
 				}
 #endif //#if defined( _MSC_VER )
 			}
