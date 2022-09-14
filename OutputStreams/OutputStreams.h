@@ -215,14 +215,13 @@ namespace mbp
 		protected:
 			virtual int sync() override
 			{
-				int maxLength = -1;
+				int maxLength = 0;
 				uint32_t numCharacters = static_cast< uint32_t >( base::pptr() - base::pbase() );
 				if ( m_stream.m_settings.CanBeOutput() )
 				{
 					int stampLength = 0;
 					int offset = 0;
 					auto isTarget = m_stream.GetIsChannelTarget();
-					++maxLength;
 					if ( !isTarget )
 					{
 						maxLength = m_stream.GetOutputStamp().GetMaxLength();
@@ -235,9 +234,9 @@ namespace mbp
 					uint32_t numBytes = ( numCharacters - offset ) * sizeof( ELEM_ );
 					// add a terminating zero character - OutputDebugString requires zero terminated strings, as might other OutputTarget implementations
 					base::sputc( 0 );
-					m_outputTarget.Output( base::pbase() + offset, numCharacters - offset, numBytes );
+					m_outputTarget.Output( base::pbase() + offset, numCharacters++ - offset, numBytes );
 				}
-				base::pbump( -static_cast< int >( numCharacters - maxLength + 1 ) );
+				base::pbump( -static_cast< int >( numCharacters - maxLength ) );
 				// we reset priority level to default priority following each flush
 				m_stream.m_settings.SetPriority( m_stream.m_settings.GetDefaultPriority() );
 				return 0;
