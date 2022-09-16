@@ -7,7 +7,8 @@
 	<META NAME="AUTHOR" CONTENT="Mike ">
 	<META NAME="CREATED" CONTENT="20220909;20194854">
 	<META NAME="CHANGEDBY" CONTENT="Mike ">
-	<META NAME="CHANGED" CONTENT="20220913;15005191">
+	<META NAME="CHANGED" CONTENT="20220916;11271452">
+	<META NAME="CHANGEDBY" CONTENT="Mike ">
 	<META NAME="CHANGEDBY" CONTENT="Mike ">
 	<STYLE TYPE="text/css">
 	<!--
@@ -172,21 +173,9 @@ streams: Microsoft's Standard Library implementation just produces an
 error relating to std::numpunct&lt;_Elem&gt;::id whilst G++ and Linux
 just seem to silently pretend that you never attempted to write a
 numeric to the stream because whilst your code will compile and run
-you certainly won't find that numeric in the stream buffer. Perhaps I
-shouldn't be surprised though, doesn't look like my compiler has been
-changed for six years:</FONT></EM></P>
-<PRE CLASS="western"><FONT FACE="Verdana, sans-serif">C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin&gt;</FONT><STRONG><FONT FACE="Verdana, sans-serif">dir cl.exe</FONT></STRONG>
-
-<FONT FACE="Verdana, sans-serif">Volume in drive C is Windows-SSD</FONT>
-<FONT FACE="Verdana, sans-serif">Volume Serial Number is 569A-00CC</FONT>
-
-<FONT FACE="Verdana, sans-serif">Directory of C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin </FONT><STRONG><FONT FACE="Verdana, sans-serif">25/08/2016</FONT></STRONG> <FONT FACE="Verdana, sans-serif">23:13 190,600 cl.exe 1 File(s) 190,600 bytes 0 Dir(s) 194,457,616,384 bytes free</FONT>
-
-<FONT FACE="Verdana, sans-serif">C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin&gt;cl</FONT>
-<FONT FACE="Verdana, sans-serif">Microsoft (R) C/C++ Optimizing Compiler Version 19.00.24215.1 for x86</FONT>
-<FONT FACE="Verdana, sans-serif">Copyright (C) Microsoft Corporation.  All rights reserved.</FONT></PRE><P>
-<FONT FACE="Verdana, sans-serif">Anyway, I decided to catch all three
-character types foreign to a stream's internal type and perform
+you certainly won't find that numeric in the stream buffer.</FONT></EM></P>
+<P><FONT FACE="Verdana, sans-serif">Anyway, I decided to catch all
+three character types foreign to a stream's internal type and perform
 integral narrowing or widening rather than just display a numeric
 pointer value as the Standard Library currently does (when it works).
 This conversion is obviously not always particularly successful when
