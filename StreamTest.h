@@ -54,12 +54,12 @@ class SingleChannelFile
 public:
 	SingleChannelFile( char const * filename_ )
 		: m_stream( filename_ )
-		, m_connector( StreamList< typename T_::type >( { &m_stream } ) )
+		, m_connector( StreamList< T_ >( { &m_stream } ) )
 		, m_channel( 0, m_connector, true )
 	{}
-	StreamList< typename T_::type > m_connector;
-	OutputStream_t< T_, OutputFile_t< typename T_::type > > m_stream;
-	OutputChannel_t< T_ > m_channel;
+	StreamList< T_ > m_connector;
+	OutputStream< T_, OutputFile_t > m_stream;
+	OutputChannel< T_ > m_channel;
 };
 
 class UTFChannelFiles : public TestUsingFiles
@@ -73,11 +73,11 @@ public:
 		, m_fileUTF16Ref( kUTF16ReferenceFilename )
 #endif // #if defined( _MSC_VER )
 	{}
-	SingleChannelFile< Stream_t< char > > m_fileUTF8;
-	SingleChannelFile< Stream_t< char > > m_fileUTF8Ref;
+	SingleChannelFile< char > m_fileUTF8;
+	SingleChannelFile< char > m_fileUTF8Ref;
 #if defined( _MSC_VER )
-	SingleChannelFile< Stream_t< wchar_t > > m_fileUTF16;
-	SingleChannelFile< Stream_t< wchar_t > > m_fileUTF16Ref;
+	SingleChannelFile< wchar_t > m_fileUTF16;
+	SingleChannelFile< wchar_t > m_fileUTF16Ref;
 #endif // #if defined( _MSC_VER )
 };
 
@@ -88,7 +88,7 @@ protected:
 		: m_output( nullptr, SystemTimeStamp_t< char >::GetInstance() )
 		, m_connector{ &m_output }
 	{}
-	OutputStream_t< Stream_t< char >, OutputStdOut_t< char > > m_output;
+	OutputStream< char, OutputStdOut_t > m_output;
 	StreamList< char > m_connector;
 };
 

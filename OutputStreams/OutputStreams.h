@@ -200,7 +200,7 @@ namespace mbp
 		/// OutputBuffer - flushes to an OutputTarget<> template class
 		//////////////////////////////////////////////////////////////////////////
 
-		template < typename TARGET_, typename ELEM_  >
+		template < typename ELEM_, template< typename > typename TARGET_  >
 		class OutputBuffer_t : public BasicBuffer_t< ELEM_ >
 		{
 		public:
@@ -211,7 +211,7 @@ namespace mbp
 				, m_outputTarget( fileName_ )
 			{}
 			virtual ~OutputBuffer_t() = default;
-			TARGET_ & GetOutputTarget() { return m_outputTarget; }
+			TARGET_< ELEM_ > & GetOutputTarget() { return m_outputTarget; }
 		protected:
 			virtual int sync() override
 			{
@@ -246,7 +246,7 @@ namespace mbp
 			OutputBuffer_t( OutputBuffer_t const & rhs_ ) = delete;
 			OutputBuffer_t & operator = ( OutputBuffer_t const & rhs_ ) = delete;
 			BasicStream_t< ELEM_ > & m_stream;
-			TARGET_ m_outputTarget;
+			TARGET_< ELEM_ > m_outputTarget;
 		};
 
 		//////////////////////////////////////////////////////////////////////////
@@ -254,18 +254,17 @@ namespace mbp
 		/// Base class will depend on whether UTF conversions are required
 		//////////////////////////////////////////////////////////////////////////
 
-		template< typename STREAMBASE_, typename TARGET_ >
-		class OutputStream_t : public STREAMBASE_
+		template< typename ELEM_, template< typename > typename TARGET_, template< typename > typename STREAMBASE_ >
+		class OutputStream_t : public STREAMBASE_< ELEM_ >
 		{
 		public:
 			OutputStream_t( char const * const initString_ = nullptr, OutputStamp & stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initialSettings_ = &GetDefaultChannelSettings() )
-				: STREAMBASE_( &m_buffer, initialSettings_, stamp_ )
+				: STREAMBASE_< ELEM_ >( &m_buffer, initialSettings_, stamp_ )
 				, m_buffer( *this, initString_ )
 			{}
-			using base = STREAMBASE_;
 			virtual ~OutputStream_t()
 			{
-				if ( base::GetIsChannelTarget() )
+				if ( STREAMBASE_< ELEM_ >::GetIsChannelTarget() )
 				{
 					// ensure OutputChannels know we have been destroyed
 					size_t index = GetIndexFromPointer( this );
@@ -275,9 +274,9 @@ namespace mbp
 					g_streamsMutex.unlock();
 				}
 			}
-			TARGET_ & GetOutputTarget() { return m_buffer.GetOutputTarget(); }
+			TARGET_< ELEM_ > & GetOutputTarget() { return m_buffer.GetOutputTarget(); }
 		protected:
-			OutputBuffer_t< TARGET_, typename base::type > m_buffer;
+			OutputBuffer_t< ELEM_, TARGET_ > m_buffer;
 			OutputStream_t( OutputStream_t const & other_ ) = delete;
 			OutputStream_t operator=( OutputStream_t const & other_ ) = delete;
 		};
@@ -287,13 +286,12 @@ namespace mbp
 		/// A specialisation of OutputStream which captures another stream's buffer (e.g. std::out) and diverts it to an OutputTarget
 		//////////////////////////////////////////////////////////////////////////
 
-		template< typename STREAMBASE_, typename TARGET_ >
-		class OutputStreamCapture_t : public OutputStream_t< STREAMBASE_, TARGET_ >
+		template< typename ELEM_, template< typename > typename STREAMBASE_, template< typename > typename TARGET_ >
+		class OutputStreamCapture_t : public OutputStream_t< ELEM_, STREAMBASE_, TARGET_ >
 		{
 		public:
-			using base = STREAMBASE_;
-			OutputStreamCapture_t( StreamSettings * initialSettings_, char const * const fileName_ = nullptr, std::basic_ostream< typename base::type > * stream_ = nullptr )
-				: OutputStream_t< TARGET_, STREAMBASE_>( initialSettings_, fileName_ )
+			OutputStreamCapture_t( StreamSettings * initialSettings_, char const * const fileName_ = nullptr, std::basic_ostream< ELEM_ > * stream_ = nullptr )
+				: OutputStream_t< ELEM_, TARGET_, STREAMBASE_>( initialSettings_, fileName_ )
 				, m_prevStream( stream_ )
 			{
 				if ( m_prevStream )
@@ -307,8 +305,8 @@ namespace mbp
 			}
 
 		private:
-			OutputStream_t< STREAMBASE_, TARGET_ > * m_prevStream;
-			std::basic_streambuf< typename base::type, std::char_traits< typename base::type  > > * m_prevStreamBuf;
+			OutputStream_t< ELEM_, STREAMBASE_, TARGET_ > * m_prevStream;
+			std::basic_streambuf< ELEM_, std::char_traits< ELEM_  > > * m_prevStreamBuf;
 
 			OutputStreamCapture_t() = delete;
 			OutputStreamCapture_t( OutputStreamCapture_t const & other_ ) = delete;
@@ -339,7 +337,7 @@ namespace mbp
 
 		stdManipOne( setw, width )
 
-			template< typename ELEM_ >
+		template< typename ELEM_ >
 		std::basic_ostream< ELEM_ > & operator << ( std::basic_ostream< ELEM_ > & stream_, setw && obj_ )
 		{
 			obj_( stream_ );
@@ -627,16 +625,21 @@ namespace mbp
 		class NullStream_t
 		{
 		public:
+			// OutputStream and Channel member function proxies
 			template< typename ... Args_ > inline NullStream_t< T_ >( Args_... args_ ) {}
 			inline void Enable( SettingsType dummy_ ) {}
 			inline void SetPriority( SettingsType dummy_ ) {}
 			inline void SetDefaultPriority( SettingsType dummy_ ) {}
 			inline void SetCap( SettingsType dummy_ ) {}
+			inline SettingsType GetEnable() { return 0;	}
+			inline SettingsType GetPriority() { return 0; }
+			inline SettingsType GetFilter() { return 0; }
+			inline SettingsType GetDefaultPriority() { return 0; }
 			// for common ios_base functions
 			template< typename U_ >
 			inline void imbue( const U_& dummy_ ) {}
 			std::locale getloc() { return std::locale::classic(); }
-			NullStream_t & flush() { return *this; }
+			inline NullStream_t & flush() { return *this; }
 		
 		};
 

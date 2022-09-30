@@ -41,27 +41,25 @@ namespace mbp
 		// hash and probe function
 		size_t GetIndexFromPointer( void * ptr_ );
 
-		template < typename ELEM_, bool MULTITHREAD_ >
+		template < typename ELEM_, template< typename > typename STREAMBASE_, bool MULTITHREAD_ >
 		class ChannelBuffer_t;
 
 		// An OutputChannel uses a Channel ID and attaches to one or more OutputStreams, allowing per-channel filtering of output
-		template< typename STREAMBASE_ >
-		class OutputChannel_t : public STREAMBASE_
+		template< typename ELEM_, template< typename > typename STREAMBASE_ >
+		class OutputChannel_t : public STREAMBASE_< ELEM_ >
 		{
-			using base = STREAMBASE_;
-			using type = typename STREAMBASE_::type;
 		public:
-			OutputChannel_t( int channelID_, std::vector< BasicStream_t< type > * > const& streams_, bool isMultiThreadChannel_ = true,  OutputStamp & stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initSettings_ = &GetDefaultChannelSettings() )
-				: base( nullptr, initSettings_, stamp_ )
+			OutputChannel_t( int channelID_, std::vector< BasicStream_t< ELEM_ > * > const& streams_, bool isMultiThreadChannel_ = true,  OutputStamp & stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initSettings_ = &GetDefaultChannelSettings() )
+				: STREAMBASE_< ELEM_ >( nullptr, initSettings_, stamp_ )
 				, m_channelId( channelID_ )
 				, m_sharedStreams( streams_ )
 			{
 				assert( channelID_ < kMaxOutputChannels );
 				// create the correct ChannelBuffer for single or multi-thread usage
 				if ( isMultiThreadChannel_ )
-					BasicStream_t< type >::rdbuf( new ChannelBuffer_t< STREAMBASE_, true >( *this, m_sharedStreams ) );
+					BasicStream_t< ELEM_ >::rdbuf( new ChannelBuffer_t< ELEM_, STREAMBASE_, true >( *this, m_sharedStreams ) );
 				else
-					BasicStream_t< type >::rdbuf( new ChannelBuffer_t< STREAMBASE_, false >( *this, m_sharedStreams ) );
+					BasicStream_t< ELEM_ >::rdbuf( new ChannelBuffer_t< ELEM_, STREAMBASE_, false >( *this, m_sharedStreams ) );
 
 				g_streamsMutex.lock();
 				if ( 0 == g_channelInitFlags[ channelID_ ]++ )
@@ -78,7 +76,7 @@ namespace mbp
 					if ( 0 == g_streamInitFlags[ index ]++ )
 					{
 						i->SetIsChannelTarget( true );
-						BasicBuffer_t< type > * buff = static_cast< BasicBuffer_t< type > * >( i->rdbuf() );
+						BasicBuffer_t< ELEM_ > * buff = static_cast< BasicBuffer_t< ELEM_ > * >( i->rdbuf() );
 						buff->SetOriginalBufferStart();
 					}
 				}
@@ -87,7 +85,7 @@ namespace mbp
 			virtual ~OutputChannel_t()
 			{
 				size_t index;
-				delete base::rdbuf();
+				delete BasicStream_t< ELEM_ >::rdbuf();
 				{
 					g_streamsMutex.lock();
 					--g_channelInitFlags[ m_channelId ];
@@ -98,7 +96,7 @@ namespace mbp
 						{
 							g_allSharedStreams[ index ] = nullptr;
 							i->SetIsChannelTarget( false );
-							BasicBuffer_t< type > * buff = static_cast< BasicBuffer_t< type > * >( i->rdbuf() );
+							BasicBuffer_t< ELEM_ > * buff = static_cast< BasicBuffer_t< ELEM_ > * >( i->rdbuf() );
 							buff->ReserveStamp( *i );
 						}
 					}
@@ -119,22 +117,21 @@ namespace mbp
 			int const GetChannelId() const { return m_channelId; }
 		private:
 			int const m_channelId;
-			std::vector < BasicStream_t< type > * > m_sharedStreams;
+			std::vector < BasicStream_t< ELEM_ > * > m_sharedStreams;
 			OutputChannel_t() = delete;
 			OutputChannel_t( OutputChannel_t const & other_ ) = delete;
 			OutputChannel_t operator=( OutputChannel_t const & other_ ) = delete;
 		};
 
 		// ChannelBuffer is an OutputChannel's buffer specialisation
-		template < typename STREAMBASE_, bool MULTITHREAD_ = true >
-		class ChannelBuffer_t : public std::basic_stringbuf< typename STREAMBASE_::type, std::char_traits< typename STREAMBASE_::type >, std::allocator< typename STREAMBASE_::type > >
+		template < typename ELEM_, template< typename > typename STREAMBASE_, bool MULTITHREAD_ = true >
+		class ChannelBuffer_t : public std::basic_stringbuf< ELEM_, std::char_traits< ELEM_ >, std::allocator< ELEM_ > >
 		{
 		protected:
-			using type = typename STREAMBASE_::type;
-			using traits = std::char_traits < type >;
-			using base = std::basic_stringbuf< type, traits, std::allocator< type > >;
+			using traits = std::char_traits < ELEM_ >;
+			using base = std::basic_stringbuf< ELEM_, traits, std::allocator< ELEM_ > >;
 		public:
-			ChannelBuffer_t( OutputChannel_t< STREAMBASE_ > & local_, std::vector< BasicStream_t< type > * > & shared_ )
+			ChannelBuffer_t( OutputChannel_t< ELEM_, STREAMBASE_ > & local_, std::vector< BasicStream_t< ELEM_ > * > & shared_ )
 				: m_localChannel( local_ )
 			{
 				for( auto *&i : shared_ )
@@ -151,7 +148,7 @@ namespace mbp
 		protected:
 			virtual int sync() override
 			{
-				BasicStream_t< type > * strm_;
+				BasicStream_t< ELEM_ > * strm_;
 				int maxLength = 0;
 				int stampLength = 0;	
 				uint8_t writesComplete[ kMaxSharedStreams ];
@@ -176,7 +173,7 @@ namespace mbp
 						{
 							if ( !writesComplete[ j ] )
 							{
-								strm_ = reinterpret_cast< BasicStream_t < type > * >( g_allSharedStreams[ i ] );
+								strm_ = reinterpret_cast< BasicStream_t < ELEM_ > * >( g_allSharedStreams[ i ] );
 								if ( strm_ && strm_->m_settings.CanBeOutput() )
 								{
 									if ( strm_->TryLock() )
@@ -198,7 +195,7 @@ namespace mbp
 				g_AllChannelSettings[ m_localChannel.GetChannelId() ].SetPriority( g_AllChannelSettings[ m_localChannel.GetChannelId() ].GetDefaultPriority() );
 				return 0;
 			}
-			OutputChannel_t< STREAMBASE_ > & m_localChannel;
+			OutputChannel_t< ELEM_, STREAMBASE_ > & m_localChannel;
 			std::vector< size_t > m_streamIndices;
 			ChannelBuffer_t() = delete;
 			ChannelBuffer_t( ChannelBuffer_t const & rhs_ ) = delete;
@@ -206,22 +203,21 @@ namespace mbp
 		};
 
 		// ChannelBuffer specialisation for single-thread use
-		template< typename STREAMBASE_ >
-		class ChannelBuffer_t< STREAMBASE_, false > : public ChannelBuffer_t< STREAMBASE_, true  >
+		template< typename ELEM_, template< typename > typename STREAMBASE_ >
+		class ChannelBuffer_t< ELEM_, STREAMBASE_, false > : public ChannelBuffer_t< ELEM_, STREAMBASE_, true  >
 		{
 		public:
-			using base = ChannelBuffer_t< STREAMBASE_, true >;
-			using type = typename base::type;
+			using base = ChannelBuffer_t< ELEM_, STREAMBASE_, true >;
 
-			ChannelBuffer_t( OutputChannel_t< STREAMBASE_ > & local_, std::vector< BasicStream_t< type > * > & shared_ )
-				: ChannelBuffer_t< STREAMBASE_, true >( local_, shared_ )
+			ChannelBuffer_t( OutputChannel_t< ELEM_, STREAMBASE_ > & local_, std::vector< BasicStream_t< ELEM_ > * > & shared_ )
+				: ChannelBuffer_t< ELEM_, STREAMBASE_, true >( local_, shared_ )
 			{
 			}
 			virtual ~ChannelBuffer_t() {}
 			virtual int sync() override
 			{
-				BasicStream_t< type > * strm_;
-
+				BasicStream_t< ELEM_ > * strm_;
+				 
 				auto maxLength = base::m_localChannel.GetOutputStamp().GetMaxLength();
 				auto stampLength = base::m_localChannel.GetOutputStamp().GetLength();
 				auto offset = maxLength - stampLength;
@@ -232,7 +228,7 @@ namespace mbp
 					base::m_localChannel.GetOutputStamp().WriteStamp( base::pbase() + offset );
 					for ( auto i : base::m_streamIndices )
 					{
-						strm_ = reinterpret_cast< BasicStream_t < type > * >( g_allSharedStreams[ i ] );
+						strm_ = reinterpret_cast< BasicStream_t < ELEM_ > * >( g_allSharedStreams[ i ] );
 						if ( strm_->m_settings.CanBeOutput() )
 						{
 							strm_->write( base::pbase() + offset, numCharacters + stampLength );
