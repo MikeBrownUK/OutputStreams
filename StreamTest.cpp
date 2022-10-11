@@ -271,7 +271,7 @@ bool isValidUTF16( wchar_t const * pBuff_, size_t * numBytes_ = nullptr )
 
 TEST( SelfTests, CheckUTF8Validator )
 {
-	char buffer[ 4 ]{ 0,0,0,0 };
+	char buffer[ 4 ]{};
 
 	bool allPassed;
 	
@@ -745,6 +745,7 @@ TEST( GeneralTests, CheckOutputStamps )
 	std::streampos streamPosition = streamOne.tellp();
 	allOK &= streamPosition > 0;
 	allOK &= false == streamOne.GetIsChannelTarget();
+	EXPECT_EQ( allOK, true );
 }
 
 void SameIDThreadFunc( int threadNumber_, int channelNumber_, StreamList< char > const & connector_, OutputStamp&& stamp_, size_t msToRun_ )
@@ -780,7 +781,7 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 		// the two streams should have none zeroed put positions following all channel disconnects as both use OutputStamps
 		std::streampos streamPos1 = streamOne.tellp();
 		std::streampos streamPos2 = streamTwo.tellp();
-		//allOK &= streamPos1 == SystemTimeStamp_t<char>::GetInstance().GetMaxLength();
+		allOK &= streamPos1 == SystemTimeStamp_t<char>::GetInstance().GetMaxLength();
 		allOK &= streamPos2 == LineStamp_t<char>::GetInstance().GetMaxLength();
 		// neither should think it has a channel attached...
 		allOK &= false == streamOne.GetIsChannelTarget();
@@ -802,13 +803,13 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 		OutputChannel< char > channelTwo( DEFAULT, connectorTwo, false, SystemTimeStamp_t<char>::GetInstance() );
 		OutputChannel< char > channelThree( DEFAULT, connectorOne, false, LineStamp_t< char >::GetInstance() );
 		OutputChannel< char > channelFour( DEFAULT, connectorTwo, false, LineStamp_t< char >::GetInstance() );
-//		channelOne << "Channel One..." << endl;
+		channelOne << "Channel One..." << endl;
  		channelTwo << "Channel Two, different stream but same ultimate target" << endl;
-// 		// filter out everything
-// 		channelOne << Filter( 0 ) << "Channel One - SHOULD NOT display" << endl;
-// 		channelOne << "Channel Two - SHOULD also NOT display" << endl;
-// 		// reset filter to let everything through
-// 		channelOne << Filter( ~0 );
+		// filter out everything
+		channelOne << Filter( 0 ) << "Channel One - SHOULD NOT display" << endl;
+		channelOne << "Channel Two - SHOULD also NOT display" << endl;
+	    // reset filter to let everything through
+ 		channelOne << Filter( ~0 );
 	}
 
 	cleanupVerify();

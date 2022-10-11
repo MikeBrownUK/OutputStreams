@@ -646,8 +646,11 @@ namespace mbp
 		template< typename T_, typename U_ >
 		inline NullStream_t< T_ > & operator << ( NullStream_t< T_ >& stream_, U_ const & ) { return stream_; }
 
-		template< typename T_, typename U_ >
- 		inline void operator << ( NullStream_t< T_ > & stream_, std::basic_ostream< U_, std::char_traits< U_ > > & ( * )( std::basic_ostream< U_, std::char_traits< U_ > > &) ) {}
+		template< typename T_ >
+		inline NullStream_t< T_ > & operator<<( NullStream_t< T_ > & stream_, std::basic_ostream< T_, std::char_traits< T_ > > & ( * _Pfn )( std::basic_ostream< T_, std::char_traits< T_ > > & ) )
+		{
+			return stream_;
+		}
 
 		template< typename T_ >
 		inline NullStream_t< T_ > & endl( NullStream_t< T_ > & stream_ )
@@ -655,12 +658,11 @@ namespace mbp
 			return stream_;
 		}
 
-		template< typename T_ >
-		inline NullStream_t< T_ > & operator <<( NullStream_t< T_ > & stream_, NullStream_t< T_ > & ( *fnc_ )( NullStream_t< T_ > & ) )
-		{
-			return stream_;
-		}
-
+// 		template< typename T_ >
+// 		inline NullStream_t< T_ > & operator <<( NullStream_t< T_ > & stream_, NullStream_t< T_ > & ( *fnc_ )( NullStream_t< T_ > & ) )
+// 		{
+// 			return stream_;
+// 		}
 	} // namespace streams
 } // namespace mbp
 

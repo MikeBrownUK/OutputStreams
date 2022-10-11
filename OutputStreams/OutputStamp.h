@@ -83,7 +83,7 @@ namespace mbp
 		{
 			std::basic_stringstream< T_ > strm;
 			strm << m_counter++ << " ";
-			return static_cast< int >( strm.str().length() );
+			return strm.str().length();
 		}
 
 		template< typename T_ >
@@ -94,7 +94,7 @@ namespace mbp
 			auto lenStr = strm.str().length();
 			if( ptr_ )
 				memcpy( ptr_, strm.str().c_str(), ( lenStr ) * sizeof( T_ ) );
-			return static_cast< int >( lenStr );
+			return lenStr;
 		}
 	}
 }

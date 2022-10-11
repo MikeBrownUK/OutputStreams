@@ -43,7 +43,6 @@ namespace mbp
 #if defined( _MSC_VER )
 			tm myTime;
 			localtime_s( &myTime, &t_c );
-			auto mills = GetNowMillisec();
 			theTimeNow << std::put_time( &myTime, "%F %T:" ) << std::setw( 3 ) << std::setfill( '0' ) << GetNowMillisec() << " ";
 #else
 			theTimeNow << std::put_time( std::localtime( &t_c ), "%F %T:" ) << std::setw( 3 ) << std::setfill( '0' ) << GetNowMillisec() << " ";
@@ -69,7 +68,6 @@ namespace mbp
 #if defined( _MSC_VER )
 			tm myTime;
 			localtime_s( &myTime, &t_c );
-			auto mills = GetNowMillisec();
 			theTimeNow << std::put_time( &myTime, "%F %T:" ) << std::setw( 3 ) << std::setfill( '0' ) << GetNowMillisec() << " ";
 #else
 			theTimeNow << std::put_time( std::localtime( &t_c ), "%F %T:" ) << std::setw( 3 ) << std::setfill( '0' ) << GetNowMillisec() << " ";
@@ -100,7 +98,6 @@ namespace mbp
 #if defined( _MSC_VER )
 			tm myTime;
 			localtime_s( &myTime, &t_c );
-			auto mills = GetNowMillisec();
 			theTimeNow << std::put_time( &myTime, "%F %T:" ) << std::setw( 3 ) << std::setfill( '0' ) << GetNowMillisec() << " ";
 #else
 			theTimeNow << std::put_time( std::localtime( &t_c ), "%F %T:" ) << std::setw( 3 ) << std::setfill( '0' ) << GetNowMillisec() << " ";
