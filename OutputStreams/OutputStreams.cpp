@@ -15,12 +15,7 @@ namespace mbp
 {
 	namespace streams
 	{
-		// for imbuing streams with test locales
-#if defined( _MSC_VER )
-		auto constexpr kLocaleGB = "en-GB";
-#elif defined( __linux )
-		auto constexpr kLocaleGB = "en_GB.utf8";
-#endif
+
 		//////////////////////////////////////////////////////////////////////////
 		// Default ChannelSettings for Streams and Channels
 		//////////////////////////////////////////////////////////////////////////

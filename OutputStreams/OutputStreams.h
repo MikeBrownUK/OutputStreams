@@ -32,6 +32,12 @@ namespace mbp
 {
 	namespace streams
 	{
+		// for imbuing streams with test locales
+#if defined( _MSC_VER )
+		auto constexpr kLocaleGB = "en-GB";
+#elif defined( __linux )
+		auto constexpr kLocaleGB = "en_GB.utf8";
+#endif
 		//////////////////////////////////////////////////////////////////////////
 		/// Settings used by OutputStreams 
 		//////////////////////////////////////////////////////////////////////////
@@ -658,11 +664,6 @@ namespace mbp
 			return stream_;
 		}
 
-// 		template< typename T_ >
-// 		inline NullStream_t< T_ > & operator <<( NullStream_t< T_ > & stream_, NullStream_t< T_ > & ( *fnc_ )( NullStream_t< T_ > & ) )
-// 		{
-// 			return stream_;
-// 		}
 	} // namespace streams
 } // namespace mbp
 

@@ -34,42 +34,61 @@ namespace mbp
 		{
 		public:
 			OutputFile_t( char const * const initString_ )
+				: m_opened( false )
 			{
 				std::stringstream filename;
 				filename << initString_;
 				m_filename = filename.str();
-				std::basic_ofstream< ELEM_, std::char_traits< ELEM_ > > outFile( filename.str().c_str(), std::ios_base::out | std::ios_base::binary | std::ios_base::trunc );
+				OpenAndTruncate();
+			}
+
+			void OpenAndTruncate()
+			{
+				std::basic_ofstream< ELEM_, std::char_traits< ELEM_ > > outFile( m_filename.c_str(), std::ios_base::out | std::ios_base::binary | std::ios_base::trunc );
+				if ( outFile.good() )
+				{
+					outFile.seekp( 0, std::ios_base::end );
+					if ( outFile.tellp() != 0 )
+						return;
+					m_opened = true;
+				}
 			}
 
 			// Output uses kernel calls to write the buffer to a file due to the bemusing way the standard libraries natively (don't) handle wide character file output 
 			void Output( ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
 			{
+				if ( !m_opened )
+					OpenAndTruncate();
+				if ( m_opened )
+				{
 #if defined( _MSC_VER )
-				HANDLE file = CreateFileA( m_filename.c_str(), GENERIC_WRITE, NULL, NULL, OPEN_EXISTING, NULL, NULL );
-				if ( file != INVALID_HANDLE_VALUE )
-				{
-					if ( INVALID_SET_FILE_POINTER != SetFilePointer( file, 0, 0, 2 ) )
+					HANDLE file = CreateFileA( m_filename.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, NULL, NULL );
+					if ( file != INVALID_HANDLE_VALUE )
 					{
-						DWORD bytesWritten;
-						WriteFile( file, output_, numBytes_, &bytesWritten, NULL );
+						if ( INVALID_SET_FILE_POINTER != SetFilePointer( file, 0, 0, 2 ) )
+						{
+							DWORD bytesWritten;
+							WriteFile( file, output_, numBytes_, &bytesWritten, NULL );
+						}
+						CloseHandle( file );
 					}
-				}
-				CloseHandle( file );
 #elif defined ( __linux )
-				int desc = open( m_filename.c_str(), O_WRONLY );
-				int numWritten;
-				if ( desc > -1 )
-				{
-					lseek( desc, 0, SEEK_END );
-					numWritten = write( desc, output_, numBytes_ );
-					if( numWritten > -1 )
-						close( desc );
-				}
+					int desc = open( m_filename.c_str(), O_WRONLY );
+					int numWritten;
+					if ( desc > -1 )
+					{
+						lseek( desc, 0, SEEK_END );
+						numWritten = write( desc, output_, numBytes_ );
+						if ( numWritten > -1 )
+							close( desc );
+					}
 #endif //#if defined( _MSC_VER )
+				}
 			}
 
 		private:
 			std::string m_filename;
+			bool m_opened;				// flags that the file has been opened and truncated successfully
 		};
 	
 		// Output to std::cout or std::wcout (latter requires USE_STD_WCOUT defined)
