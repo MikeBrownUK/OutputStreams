@@ -627,12 +627,15 @@ namespace mbp
 		// NullStream declaration
 		//////////////////////////////////////////////////////////////////////////
 
-		template< typename T_ >
+		template< typename T_  >
 		class NullStream_t
 		{
 		public:
-			// OutputStream and Channel member function proxies
-			template< typename ... Args_ > inline NullStream_t< T_ >( Args_... args_ ) {}
+			template< typename ... Args_ >
+			inline NullStream_t< T_ >( Args_ const& ... args_ ) {}
+			// below needed for OutputChannel declarations of the form: OutputChannel< T_ > myChannel( 0, { &streamOne, &streamTwo ... }, true );
+			template< typename U_ >
+			inline NullStream_t< T_ >( int, std::initializer_list< U_ > const &, bool ){}
 			inline void Enable( SettingsType dummy_ ) {}
 			inline void SetPriority( SettingsType dummy_ ) {}
 			inline void SetDefaultPriority( SettingsType dummy_ ) {}
@@ -646,7 +649,6 @@ namespace mbp
 			inline void imbue( const U_& dummy_ ) {}
 			std::locale getloc() { return std::locale::classic(); }
 			inline NullStream_t & flush() { return *this; }
-		
 		};
 
 		template< typename T_, typename U_ >
