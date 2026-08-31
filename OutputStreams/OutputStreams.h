@@ -414,24 +414,28 @@ namespace mbp
 		// and their stream forwarders
 
 		template< typename ELEM_ >
-		BasicStream_t< ELEM_ > & operator << ( BasicStream_t< ELEM_ > & stream_, Enable && obj_ )
+		BasicStream_t< ELEM_ >& operator << ( std::basic_ostream< ELEM_ >& stream_, Enable && obj_ )
 		{
-			return obj_( stream_ );
+			BasicStream_t< ELEM_ > & cast = static_cast< BasicStream_t< ELEM_ >& >( stream_ );
+			return obj_( cast );
 		}
 		template< typename ELEM_ >
-		BasicStream_t< ELEM_ > & operator << ( BasicStream_t< ELEM_ > & stream_, Priority && obj_ )
+		BasicStream_t< ELEM_ > & operator << ( std::basic_ostream< ELEM_ > & stream_, Priority && obj_ )
 		{
-			return obj_( stream_ );
+			BasicStream_t< ELEM_ >& cast = static_cast< BasicStream_t< ELEM_ >& >( stream_ );
+			return obj_( cast );
 		}
 		template< typename ELEM_ >
-		BasicStream_t< ELEM_ > & operator << ( BasicStream_t< ELEM_ > & stream_, DefaultPriority && obj_ )
+		BasicStream_t< ELEM_ > & operator << ( std::basic_ostream< ELEM_ >& stream_, DefaultPriority && obj_ )
 		{
-			return obj_( stream_ );
+			BasicStream_t< ELEM_ >& cast = static_cast< BasicStream_t< ELEM_ >& >( stream_ );
+			return obj_( cast );
 		}
 		template< typename ELEM_ >
-		BasicStream_t< ELEM_ > & operator << ( BasicStream_t< ELEM_ > & stream_, Filter && obj_ )
+		BasicStream_t< ELEM_ > & operator << ( std::basic_ostream< ELEM_ >& stream_, Filter && obj_ )
 		{
-			return obj_( stream_ );
+			BasicStream_t< ELEM_ >& cast = static_cast< BasicStream_t< ELEM_ >& >( stream_ );
+			return obj_( cast );
 		}
 
 		//////////////////////////////////////////////////////////////////////////
