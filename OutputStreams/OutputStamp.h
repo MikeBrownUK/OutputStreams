@@ -31,7 +31,7 @@ namespace mbp
 			virtual void Unlock() {}
 			static OutputStamp & GetDummyStamp()
 			{
-				static OutputStamp instance;
+				static thread_local OutputStamp instance;
 				return instance;
 			}
 			OutputStamp() = default;
@@ -43,7 +43,7 @@ namespace mbp
 		class SystemTimeStamp_t : public OutputStamp
 		{
 		public:
-			static SystemTimeStamp_t & GetInstance() { static SystemTimeStamp_t inst; return inst; }
+			static SystemTimeStamp_t & GetInstance() { static thread_local SystemTimeStamp_t inst; return inst; }
 			virtual int GetMaxLength() const { return m_kNumberOfCharacters; }
 			virtual int GetLength() { return m_kNumberOfCharacters; }
 			virtual int WriteStamp( void * ptr_ = nullptr );
@@ -62,7 +62,7 @@ namespace mbp
 		class LineStamp_t : public OutputStamp
 		{
 		public:
-			static LineStamp_t & GetInstance() { static LineStamp_t inst; return inst; }
+			static LineStamp_t & GetInstance() { static thread_local LineStamp_t inst; return inst; }
 			virtual int GetMaxLength() const { return 32; }		// purely arbitrary (and somewhat ridiculous for a line count)
 			virtual int GetLength();
 			virtual int WriteStamp( void * ptr_ = nullptr );
@@ -71,7 +71,7 @@ namespace mbp
 			virtual void Unlock() { m_mutex.unlock(); }
 		private:
 			LineStamp_t()
-				: m_counter( 0 )
+				: m_counter( 1 )
 			{}
 			uint32_t m_counter;
 			uint32_t m_kNumberOfCharacters;
@@ -82,7 +82,7 @@ namespace mbp
 		int mbp::streams::LineStamp_t<T_>::GetLength()
 		{
 			std::basic_stringstream< T_ > strm;
-			strm << m_counter++ << " ";
+			strm << m_counter << " ";
 			return strm.str().length();
 		}
 
@@ -90,7 +90,7 @@ namespace mbp
 		int mbp::streams::LineStamp_t<T_>::WriteStamp( void * ptr_ /* = nullptr */  )
 		{
 			std::basic_stringstream< T_ > strm;
-			strm << m_counter << " ";
+			strm << m_counter++ << " ";
 			auto lenStr = strm.str().length();
 			if( ptr_ )
 				memcpy( ptr_, strm.str().c_str(), ( lenStr ) * sizeof( T_ ) );

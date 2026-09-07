@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
-/// Mike Brown, 2019
+/// ©Mike Brown, 2014-2026
+/// https://www.mikebrown.co.uk
 ///
 ///	Filename: 	OutputChannels.h
 ///	Created:	31/7/2019
@@ -32,170 +33,239 @@ namespace mbp
 
 		// array of priority and filter settings for each channel, indexed by Channel ID
 		extern StreamSettings g_AllChannelSettings[ kMaxOutputChannels ];
-		extern uint8_t g_channelInitFlags[ kMaxOutputChannels ];
+		extern uint8_t * GetChannelInitFlags();
 		// array of shared stream pointers and initialisation flags used to prevent new channels from performing reinitialisation when attaching to the same one
-		extern void * g_allSharedStreams[ kPrime ];
-		extern uint8_t g_streamInitFlags[ kPrime ];
+		extern void ** GetSharedStreamArray();
+		extern uint8_t * GetStreamInitFlags();
 		// mutex protecting the above
-		extern std::mutex g_streamsMutex;
+		extern std::mutex & GetMasterChannelMutex();
 		// hash and probe function
 		size_t GetIndexFromPointer( void * ptr_ );
 
-		template < typename ELEM_, template< typename > typename STREAMBASE_, bool MULTITHREAD_ >
+		template < typename ELEM_, bool MULTITHREAD_ = true >
 		class ChannelBuffer_t;
 
+#if !defined( OUTPUT_STREAM_STRIP )
+
 		// An OutputChannel uses a Channel ID and attaches to one or more OutputStreams, allowing per-channel filtering of output
-		template< typename ELEM_, template< typename > typename STREAMBASE_ >
-		class OutputChannel_t : public STREAMBASE_< ELEM_ >
+		template< typename STREAMBASE_ >
+		class OutputChannel_t : public STREAMBASE_
 		{
 		public:
-			OutputChannel_t( int channelID_, std::vector< BasicStream_t< ELEM_ > * > const& streams_, bool isMultiThreadChannel_ = true,  OutputStamp & stamp_ = OutputStamp::GetDummyStamp(), StreamSettings * initSettings_ = &GetDefaultChannelSettings() )
-				: STREAMBASE_< ELEM_ >( nullptr, initSettings_, stamp_ )
+			using elem = typename STREAMBASE_::elem;
+
+			OutputChannel_t( BasicBuffer_t< elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< elem > * > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultChannelSettings(), bool bCleanupBuffer = false )
+				: STREAMBASE_( pBuffer_ )
 				, m_channelId( channelID_ )
 				, m_sharedStreams( streams_ )
+				, m_bCleanup( bCleanupBuffer )
 			{
 				assert( channelID_ < kMaxOutputChannels );
-				// create the correct ChannelBuffer for single or multi-thread usage
-				if ( isMultiThreadChannel_ )
-					BasicStream_t< ELEM_ >::rdbuf( new ChannelBuffer_t< ELEM_, STREAMBASE_, true >( *this, m_sharedStreams ) );
-				else
-					BasicStream_t< ELEM_ >::rdbuf( new ChannelBuffer_t< ELEM_, STREAMBASE_, false >( *this, m_sharedStreams ) );
-
-				g_streamsMutex.lock();
-				if ( 0 == g_channelInitFlags[ channelID_ ]++ )
+				GetMasterChannelMutex().lock();
+				// check to see if channel ID's settings have been initialised (only the first channel constructed with an ID gets to do this)
+				if ( 0 == GetChannelInitFlags()[ channelID_ ]++ )
 				{
-					g_AllChannelSettings[ channelID_ ].Enable( initSettings_->GetEnable() );
-					g_AllChannelSettings[ channelID_ ].SetPriority( initSettings_->GetPriority() );
-					g_AllChannelSettings[ channelID_ ].SetDefaultPriority( initSettings_->GetDefaultPriority() );
-					g_AllChannelSettings[ channelID_ ].SetFilter( initSettings_->GetFilter() );
+					// forward initial settings to channel ID settings
+					g_AllChannelSettings[ channelID_ ].Enable( initSettings_.GetEnable() );
+					g_AllChannelSettings[ channelID_ ].SetPriority( initSettings_.GetPriority() );
+					g_AllChannelSettings[ channelID_ ].SetDefaultPriority( initSettings_.GetDefaultPriority() );
+					g_AllChannelSettings[ channelID_ ].SetFilter( initSettings_.GetFilter() );
 				}
-				for ( auto *& i : m_sharedStreams )
+				for ( auto& i : m_sharedStreams )
 				{
 					size_t index = GetIndexFromPointer( i );
-					g_allSharedStreams[ index ] = i;
-					if ( 0 == g_streamInitFlags[ index ]++ )
-					{
-						i->SetIsChannelTarget( true );
-						BasicBuffer_t< ELEM_ > * buff = static_cast< BasicBuffer_t< ELEM_ > * >( i->rdbuf() );
-						buff->SetOriginalBufferStart();
-					}
+					GetSharedStreamArray()[ index ] = i;
 				}
-				g_streamsMutex.unlock();
+				GetMasterChannelMutex().unlock();
 			}
 			virtual ~OutputChannel_t()
 			{
 				size_t index;
-				delete BasicStream_t< ELEM_ >::rdbuf();
+				if( m_bCleanup )
+					delete rdbuf();
 				{
-					g_streamsMutex.lock();
-					--g_channelInitFlags[ m_channelId ];
+					GetMasterChannelMutex().lock();
+					--GetChannelInitFlags()[ m_channelId ];
 					for ( auto *& i : m_sharedStreams )
 					{
 						index = GetIndexFromPointer( i );
-						if ( 1 == g_streamInitFlags[ index ]-- )
+						if ( 1 == GetStreamInitFlags()[ index ]-- )
 						{
-							g_allSharedStreams[ index ] = nullptr;
+							GetSharedStreamArray()[ index ] = nullptr;
 							i->SetIsChannelTarget( false );
-							BasicBuffer_t< ELEM_ > * buff = static_cast< BasicBuffer_t< ELEM_ > * >( i->rdbuf() );
-							buff->ReserveStamp( *i );
+							BasicBuffer_t< elem > * buff = static_cast< BasicBuffer_t< elem > * >( i->rdbuf() );
+							buff->ReserveStamp();
 						}
 					}
-					g_streamsMutex.unlock();
+					GetMasterChannelMutex().unlock();
 				}
 			}
-			// enable channel and filter functions for the shared stream (all threads)
-			virtual void Enable( SettingsType enable_ ) override { g_AllChannelSettings[ m_channelId ].Enable( enable_ ); }
-			virtual SettingsType GetEnable() override { return g_AllChannelSettings[ m_channelId ].GetEnable(); }
-			virtual void SetPriority( SettingsType newPriority_ ) override { g_AllChannelSettings[ m_channelId ].SetPriority( newPriority_ ); }
-			virtual SettingsType GetPriority() override { return g_AllChannelSettings[ m_channelId ].GetPriority(); }
-			virtual void SetDefaultPriority( SettingsType newDefault_ ) override {
-				g_AllChannelSettings[ m_channelId ].SetDefaultPriority( newDefault_ ); g_AllChannelSettings[ m_channelId ].SetPriority( newDefault_ );
-			}
-			virtual SettingsType GetDefaultPriority() override { return g_AllChannelSettings[ m_channelId ].GetDefaultPriority(); }
-			virtual void SetFilter( SettingsType newFilter_ ) override { g_AllChannelSettings[ m_channelId ].SetFilter( newFilter_ ); }
-			virtual SettingsType GetFilter() override { return g_AllChannelSettings[ m_channelId ].GetFilter(); }
 			int const GetChannelId() const { return m_channelId; }
 		private:
+			bool m_bCleanup;
 			int const m_channelId;
-			std::vector < BasicStream_t< ELEM_ > * > m_sharedStreams;
+			std::vector < BasicStream_t< elem > * > m_sharedStreams;
 			OutputChannel_t() = delete;
 			OutputChannel_t( OutputChannel_t const & other_ ) = delete;
 			OutputChannel_t operator=( OutputChannel_t const & other_ ) = delete;
 		};
 
 		// ChannelBuffer is an OutputChannel's buffer specialisation
-		template < typename ELEM_, template< typename > typename STREAMBASE_, bool MULTITHREAD_ = true >
-		class ChannelBuffer_t : public std::basic_stringbuf< ELEM_, std::char_traits< ELEM_ >, std::allocator< ELEM_ > >
+		template < class ELEM_, bool MULTITHREAD_ >
+		class ChannelBuffer_t : public BasicBuffer_t< ELEM_ >
 		{
 		protected:
-			using traits = std::char_traits < ELEM_ >;
-			using base = std::basic_stringbuf< ELEM_, traits, std::allocator< ELEM_ > >;
+			using elem = ELEM_;
+			using traits = std::char_traits < elem >;
+			using base = std::basic_stringbuf< elem, traits, std::allocator< elem > >;
 		public:
-			ChannelBuffer_t( OutputChannel_t< ELEM_, STREAMBASE_ > & local_, std::vector< BasicStream_t< ELEM_ > * > & shared_ )
-				: m_localChannel( local_ )
+			ChannelBuffer_t( int channelID_, std::vector< BasicStream_t< elem > * >const & shared_, OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+				: BasicBuffer_t< ELEM_ >( m_dummyTarget )
+				, m_bInitialised( false )
+				, m_channelID( channelID_ )
+				, m_stamp( stamp_ )
 			{
-				for( auto *&i : shared_ )
+				for( auto &i : shared_ )
 				{
 					m_streamIndices.push_back( GetIndexFromPointer( i ) );
 				}
-				auto len = local_.GetOutputStamp().GetMaxLength();
+				auto len = m_stamp.GetMaxLength();
+
+				// force initial allocation
 				for ( auto i = 0; i < len; ++i )
 				{
 					base::sputc( 'C' );
 				}
+				m_cToNext = m_stamp.GetMaxLength();
+				
 			}
-			virtual ~ChannelBuffer_t()	{}
-		protected:
-			virtual int sync() override
+			virtual ~ChannelBuffer_t()	
 			{
-				BasicStream_t< ELEM_ > * strm_;
-				int maxLength = 0;
-				int stampLength = 0;	
-				uint8_t writesComplete[ kMaxSharedStreams ];
-				auto numCharacters = base::pptr() - base::pbase();
-				if ( g_AllChannelSettings[ m_localChannel.GetChannelId() ].CanBeOutput() )
+				m_streamIndices.clear();
+			}
+
+			// enable channel and filter functions for the shared stream (all threads)
+			virtual void Enable( SettingsType enable_ ) override { g_AllChannelSettings[ m_channelID ].Enable( enable_ ); }
+			virtual SettingsType GetEnable() override { return g_AllChannelSettings[ m_channelID ].GetEnable(); }
+			virtual void SetPriority( SettingsType newPriority_ ) override { g_AllChannelSettings[ m_channelID ].SetPriority( newPriority_ ); }
+			virtual SettingsType GetPriority() override { return g_AllChannelSettings[ m_channelID ].GetPriority(); }
+			virtual void SetDefaultPriority( SettingsType newDefault_ ) override
+			{
+				g_AllChannelSettings[ m_channelID ].SetDefaultPriority( newDefault_ ); g_AllChannelSettings[ m_channelID ].SetPriority( newDefault_ );
+			}
+			virtual SettingsType GetDefaultPriority() override { return g_AllChannelSettings[ m_channelID ].GetDefaultPriority(); }
+			virtual void SetFilter( SettingsType newFilter_ ) override { g_AllChannelSettings[ m_channelID ].SetFilter( newFilter_ ); }
+			virtual SettingsType GetFilter() override { return g_AllChannelSettings[ m_channelID ].GetFilter(); }
+
+		protected:
+			void PerformInit()
+			{
+				for ( auto i : m_streamIndices )
 				{
-					maxLength = m_localChannel.GetOutputStamp().GetMaxLength();
-					m_localChannel.GetOutputStamp().Lock();
-					stampLength = m_localChannel.GetOutputStamp().GetLength();
-					auto offset = maxLength - stampLength;
-					m_localChannel.GetOutputStamp().WriteStamp( base::pbase() + offset );
-					m_localChannel.GetOutputStamp().Unlock();
-					numCharacters -= maxLength;
-					for ( auto i = 0u; i < m_streamIndices.size(); ++i )
-						writesComplete[ i ] = 0;
-					int done, j;
-					do
+					GetMasterChannelMutex().lock();
+					if ( 0 == GetStreamInitFlags()[ i ]++ )
 					{
-						j = 0;
-						done = 1;
-						for ( auto i : m_streamIndices )
+						BasicStream_t < elem >* strm = reinterpret_cast< BasicStream_t < elem > * >( GetSharedStreamArray()[ i ] );
+						strm->SetIsChannelTarget( true );
+						BasicBuffer_t< elem >* buff = static_cast< BasicBuffer_t< elem > * >( strm->rdbuf() );
+						buff->SetOriginalBufferStart();
+
+					}
+					GetMasterChannelMutex().unlock();
+				}
+				m_bInitialised = true;	
+			}
+
+			virtual int flush( bool bIsStreamFlush = false ) override
+			{
+				bool bWriteStamp = true;
+				BasicStream_t< elem >* strm;
+				auto maxLength = m_stamp.GetMaxLength();
+				auto stampLength = 0;
+				auto offset = 0;
+				auto numToOutput = base::pptr() - base::pbase();	// this will hold total characters to output including prefix
+				auto numSentToStream = numToOutput - maxLength;		// number of characters sent to stream via client
+
+				uint8_t writesComplete[ kMaxSharedStreams ];
+
+				if ( numSentToStream && g_AllChannelSettings[ m_channelID ].CanBeOutput() )
+				{
+					if ( bIsStreamFlush )
+					{
+						m_stamp.Lock();
+						stampLength = m_stamp.GetLength();
+						m_stamp.Unlock();
+						auto offsetInBuffer = maxLength - stampLength;		// position in buffer for forwarding		
+						numToOutput -= maxLength - stampLength;				// finalised output count
+
+						for ( auto i = 0u; i < m_streamIndices.size(); ++i )
+							writesComplete[ i ] = 0;
+
+						int done, j;
+
+						do
 						{
-							if ( !writesComplete[ j ] )
+							j = 0;
+							done = 1;
+							for ( auto i : m_streamIndices )
 							{
-								strm_ = reinterpret_cast< BasicStream_t < ELEM_ > * >( g_allSharedStreams[ i ] );
-								if ( strm_ && strm_->m_settings.CanBeOutput() )
+								if ( !writesComplete[ j ] )
 								{
-									if ( strm_->TryLock() )
+									strm = reinterpret_cast< BasicStream_t < elem > * >( GetSharedStreamArray()[ i ] );
+									if ( strm && reinterpret_cast< BasicBuffer_t< elem > * >( strm->rdbuf() )->GetSettings().CanBeOutput() )
 									{
-										strm_->write( base::pbase() + offset, numCharacters + stampLength );
-										strm_->flush();
-										strm_->Unlock();
-										++writesComplete[ j ];
+
+										if ( numSentToStream == 1 )
+										{
+											elem lastChar = *( pptr() - 1 );
+											// don't timestamp lines with carriage return only
+											if ( lastChar == '\n' )
+											{
+												offsetInBuffer = maxLength;
+												numToOutput = 1;
+												bWriteStamp = false;
+												// and abort all attached stream writes
+												done = 1;
+												break;
+											}
+										}
+										if ( strm->TryLock() )
+										{
+											if ( bWriteStamp )
+												m_stamp.WriteStamp( base::pbase() + offsetInBuffer );
+											strm->write( base::pbase() + offsetInBuffer, numToOutput );
+											strm->flush();
+											strm->Unlock();
+											++writesComplete[ j ];
+										}
 									}
 								}
-								else
-									++writesComplete[ j ];
-								done &= writesComplete[ j++ ];
 							}
-						}
-					} while ( !done );
+						} while ( !done );
+					}
+					else
+					{
+						m_cToNext = base::pptr() - base::pbase();	// update buffer count but don't output at all
+					}
 				}
-				base::pbump( -static_cast< int >( numCharacters ) );
-				g_AllChannelSettings[ m_localChannel.GetChannelId() ].SetPriority( g_AllChannelSettings[ m_localChannel.GetChannelId() ].GetDefaultPriority() );
+				base::setp( base::pbase(), base::pbase() + m_cToNext, base::epptr() );
 				return 0;
 			}
-			OutputChannel_t< ELEM_, STREAMBASE_ > & m_localChannel;
+
+			virtual int sync() override
+			{
+				if ( !m_bInitialised )
+					PerformInit();
+				m_cToNext = m_stamp.GetMaxLength();
+				flush( true );
+				g_AllChannelSettings[ m_channelID ].SetPriority( g_AllChannelSettings[ m_channelID ].GetDefaultPriority() );
+				return 0;
+			}
+
+			bool m_bInitialised;
+			OutputTarget m_dummyTarget;
+			int m_channelID;
+			OutputStamp& m_stamp;
 			std::vector< size_t > m_streamIndices;
 			ChannelBuffer_t() = delete;
 			ChannelBuffer_t( ChannelBuffer_t const & rhs_ ) = delete;
@@ -203,44 +273,112 @@ namespace mbp
 		};
 
 		// ChannelBuffer specialisation for single-thread use
-		template< typename ELEM_, template< typename > typename STREAMBASE_ >
-		class ChannelBuffer_t< ELEM_, STREAMBASE_, false > : public ChannelBuffer_t< ELEM_, STREAMBASE_, true  >
+		template< typename ELEM_ >
+		class ChannelBuffer_t< ELEM_, false > : public ChannelBuffer_t< ELEM_, true  >
 		{
 		public:
-			using base = ChannelBuffer_t< ELEM_, STREAMBASE_, true >;
+			using elem = ELEM_;
+			using base = ChannelBuffer_t< ELEM_, true >;
 
-			ChannelBuffer_t( OutputChannel_t< ELEM_, STREAMBASE_ > & local_, std::vector< BasicStream_t< ELEM_ > * > & shared_ )
-				: ChannelBuffer_t< ELEM_, STREAMBASE_, true >( local_, shared_ )
+			ChannelBuffer_t( int channelID_, std::vector< BasicStream_t< elem >* >const& shared_, OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+				: ChannelBuffer_t< elem, true >( channelID_, shared_, stamp_ )
 			{
 			}
 			virtual ~ChannelBuffer_t() {}
-			virtual int sync() override
-			{
-				BasicStream_t< ELEM_ > * strm_;
-				 
-				auto maxLength = base::m_localChannel.GetOutputStamp().GetMaxLength();
-				auto stampLength = base::m_localChannel.GetOutputStamp().GetLength();
+			virtual int flush( bool bIsStreamFlush = false ) override
+			{	
+				bool bWriteStamp = true;
+				BasicStream_t< elem >* strm;
+				auto maxLength = m_stamp.GetMaxLength();
+				auto stampLength = m_stamp.GetLength();
 				auto offset = maxLength - stampLength;
-				auto numCharacters = base::pptr() - base::pbase() - maxLength;
-
-				if ( g_AllChannelSettings[ base::m_localChannel.GetChannelId() ].CanBeOutput() )
+				auto numSentToStream = base::pptr() - base::pbase() - maxLength;
+				auto numToOutput = numSentToStream + stampLength;
+				
+				if ( g_AllChannelSettings[ m_channelID ].CanBeOutput() )
 				{
-					base::m_localChannel.GetOutputStamp().WriteStamp( base::pbase() + offset );
-					for ( auto i : base::m_streamIndices )
+					if ( bIsStreamFlush == false )
+						m_cToNext = base::pptr() - base::pbase();
+					else
 					{
-						strm_ = reinterpret_cast< BasicStream_t < ELEM_ > * >( g_allSharedStreams[ i ] );
-						if ( strm_->m_settings.CanBeOutput() )
+						for ( auto i : base::m_streamIndices )
 						{
-							strm_->write( base::pbase() + offset, numCharacters + stampLength );
-							strm_->flush();
+							strm = reinterpret_cast< BasicStream_t < elem > * >( GetSharedStreamArray()[ i ] );
+							if ( ( reinterpret_cast< BasicBuffer_t< elem > * >( strm->rdbuf() ) )->GetSettings().CanBeOutput() )
+							{
+								if ( bIsStreamFlush )
+								{
+									if ( numToOutput == ( maxLength - offset ) + 1 )
+									{
+										elem lastChar = *( pptr() - 1 );
+										// don't timestamp lines with carriage return only
+										if ( lastChar == '\n' )
+										{
+											offset = maxLength;
+											numToOutput = 1;
+											bWriteStamp = false;
+										}
+									}
+									if( bWriteStamp )
+										m_stamp.WriteStamp( base::pbase() + offset );
+									strm->write( base::pbase() + offset, numToOutput );
+									strm->flush();
+									g_AllChannelSettings[ m_channelID ].SetPriority( g_AllChannelSettings[ m_channelID ].GetDefaultPriority() );
+								}
+							}
 						}
 					}
 				}
-				base::pbump( -static_cast< int >( numCharacters ) );
-				g_AllChannelSettings[ base::m_localChannel.GetChannelId() ].SetPriority( g_AllChannelSettings[ base::m_localChannel.GetChannelId() ].GetDefaultPriority() );
+				base::setp( base::pbase(), base::pbase() + m_cToNext, base::epptr() );
+				
 				return 0;
 			}
 		};
+
+		template< typename T_, bool MULTITHREAD_ = true >
+		class OutputChannelComplete_t : public OutputChannel_t< T_ >
+		{
+		public:
+			OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+				: OutputChannel_t< T_ >( &m_buffer, channelID_, streams_, MULTITHREAD_, initSettings_ )
+				, m_buffer( channelID_, streams_, stamp_ )
+			{
+			}
+			virtual ~OutputChannelComplete_t() = default;
+		private:
+			ChannelBuffer_t< typename T_::elem, MULTITHREAD_ > m_buffer;
+		};
+#else
+
+		template< typename T_, bool MULTITHREAD_ >
+		class ChannelBuffer_t : public NullStream_t< T_ >
+		{
+		public:
+			ChannelBuffer_t( int channelID_, std::vector< BasicStream_t< T_ >* >const& shared_, OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			{
+			}
+		};
+
+		template< typename T_ >
+		class OutputChannel_t : public OutputStream_t< T_ >
+		{
+		public:
+			OutputChannel_t( ChannelBuffer_t< typename T_::elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultChannelSettings(), bool bCleanupBuffer = false )
+				: OutputStream_t< T_ >( pBuffer_ )
+			{
+			}
+		};
+		
+		template< typename T_, bool MULTITHREAD_ >
+		class OutputChannelComplete_t : public T_
+		{
+		public:
+			inline OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			{
+			}
+		};
+
+#endif //#if !defined( OUTPUT_STREAM_STRIP )
 	}
 }
 

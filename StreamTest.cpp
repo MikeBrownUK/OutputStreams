@@ -1,11 +1,13 @@
 ﻿//////////////////////////////////////////////////////////////////////////
-/// Mike Brown, 2022
+/// ©Mike Brown, 2014-2026
+/// https://www.mikebrown.co.uk
 ///
 /// Filename:	StreamTest.cpp
 /// Created:	16/8/2022
 /// Author:		Mike
 /// 
-/// Description: Test framework for OutputStreams
+/// Description: Test framework for OutputStreams (new classes and instancing syntax)
+///				 Release 1.5
 ///
 //////////////////////////////////////////////////////////////////////////
 
@@ -137,14 +139,14 @@ void CleanupFiles()
 #endif
 }
 
-void WriteUTF8CodeRange( BasicStream< char > & out, size_t firstCP_, size_t lastCP_, size_t glyphsPerRow_, bool header_ = true, bool spaces_ = true, bool skipControls = true )
+void WriteUTF8CodeRange( BasicStream_t< char > & out, size_t firstCP_, size_t lastCP_, size_t glyphsPerRow_, bool header_ = true, bool spaces_ = true, bool skipControls = true )
 {
 	char buffer[ 5 ];
 	size_t charsPerGlyph;
 	size_t count = 0;
 
 	if ( header_ )
-		out << std::hex << std::setw( 6 ) << std::setfill( '0' ) << "UTF characters from codepoint 0x" << firstCP_ << " to 0x" << lastCP_ << ":" << endl << std::hex << std::setw( 6 ) << std::setfill( '0' ) << ( firstCP_ / glyphsPerRow_ ) * glyphsPerRow_ << "\t";
+		out << std::hex << std::setw( 6 ) << std::setfill( '0' ) << "UTF characters from codepoint 0x" << firstCP_ << " to 0x" << lastCP_ << ":" << "\n" << std::hex << std::setw( 6 ) << std::setfill( '0' ) << ( firstCP_ / glyphsPerRow_ ) * glyphsPerRow_ << "\t";
 
 	for ( auto i = firstCP_; i <= lastCP_; ++i )
 	{
@@ -160,20 +162,20 @@ void WriteUTF8CodeRange( BasicStream< char > & out, size_t firstCP_, size_t last
 		if ( ++count == glyphsPerRow_ && ( i < lastCP_ ) )
 		{
 			count = 0;
-			out << endl << std::setw( 6 ) << std::setfill( '0' ) << std::hex << ( ( i + 1 ) / glyphsPerRow_ ) * glyphsPerRow_ << "\t";
+			out << "\n" << std::setw( 6 ) << std::setfill( '0' ) << std::hex << ( ( i + 1 ) / glyphsPerRow_ ) * glyphsPerRow_ << "\t";
 		}
 	}
 	out.flush();
 }
 
-void WriteUTF16CodeRange( BasicStream< wchar_t > & out, size_t firstCP_, size_t lastCP_, size_t glyphsPerRow_, bool header_ = true, bool spaces_ = true, bool skipControls = true )
+void WriteUTF16CodeRange( BasicStream_t< wchar_t > & out, size_t firstCP_, size_t lastCP_, size_t glyphsPerRow_, bool header_ = true, bool spaces_ = true, bool skipControls = true )
 {
 	wchar_t buffer[ 3 ];
 	size_t charsPerGlyph;
 	size_t count = 0;
 
 	if ( header_ )
-		out << std::hex << std::setw( 6 ) << std::setfill( L'0' ) << L"UTF characters from codepoint 0x" << firstCP_ << L" to 0x" << lastCP_ << L":" << endl << std::hex << std::setw( 6 ) << std::setfill( L'0' ) << ( firstCP_ / glyphsPerRow_ ) * glyphsPerRow_ << L"\t";
+		out << std::hex << std::setw( 6 ) << std::setfill( L'0' ) << L"UTF characters from codepoint 0x" << firstCP_ << L" to 0x" << lastCP_ << L":" << "\n" << std::hex << std::setw( 6 ) << std::setfill( L'0' ) << ( firstCP_ / glyphsPerRow_ ) * glyphsPerRow_ << L"\t";
 
 	for ( auto i = firstCP_; i <= lastCP_; ++i )
 	{
@@ -190,7 +192,7 @@ void WriteUTF16CodeRange( BasicStream< wchar_t > & out, size_t firstCP_, size_t 
 		if ( count == glyphsPerRow_ && ( i < lastCP_ ) )
 		{
 			count = 0;
-			out << endl << std::setw( 6 ) << std::setfill( L'0' ) << std::hex << ( ( i + 1 ) / glyphsPerRow_ ) * glyphsPerRow_ << L"\t";
+			out << "\n" << std::setw( 6 ) << std::setfill( L'0' ) << std::hex << ( ( i + 1 ) / glyphsPerRow_ ) * glyphsPerRow_ << L"\t";
 		}
 	}
 	out.flush();
@@ -322,8 +324,8 @@ TEST( InitAndCleanupTests, CheckStreamCleanup_Single )
 	_CrtMemCheckpoint( &entryState );
 #endif // #if defined( _MSC_VER )
 	{
-		OutputStream<  char, OutputStdOut_t > output;
-		output << "Single Stream cleanup test... Some numbers: " << 18 << ", " << std::hex << 65535 << ", " << 3.4 << ", " << 5.1f << endl;
+		OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > output;
+		output << "Single Stream cleanup test... Some numbers: " << 18 << ", " << std::hex << 65535 << ", " << 3.4 << ", " << 5.1f << std::endl;
 	}
 #if defined( _MSC_VER )
 	_CrtMemCheckpoint( &exitState );
@@ -341,11 +343,11 @@ TEST( InitAndCleanupTests, CheckChannelCleanup_Single )
 	_CrtMemCheckpoint( &entryState );
 #endif // #if defined( _MSC_VER )
 	{
-		OutputStream< char, OutputStdOut_t > output;
+		OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > output;
 		StreamList< char > connector{ &output };
-		OutputChannel< char > channel( 0, connector, false );
+		OutputChannelComplete_t< Stream_t< char >, false > channel( 0, connector );
 
-		channel << "Single Channel cleanup test... Some more numbers: " << 41 << ", " << std::oct << 9 << ", " << 4537 << endl;
+		channel << "Single Channel cleanup test... Some more numbers: " << 41 << ", " << std::oct << 9 << ", " << 4537 << std::endl;
 	}
 #if defined( _MSC_VER )
 	_CrtMemCheckpoint( &exitState );
@@ -361,16 +363,16 @@ TEST( InitAndCleanupTests, CheckMany )
 	_CrtMemCheckpoint( &entryState );
 #endif // #if defined( _MSC_VER )
 	{
-		OutputStream< char, OutputStdOut_t > outCharSingle;
+		OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > outCharSingle;
 		StreamList< char > connectorSingle{ &outCharSingle };
-		OutputChannel<  char > singleThreadChannel( 0, connectorSingle, false );
-		OutputStream<  char32_t, OutputFile_t > out32File( kUTF32Filename );
-		OutputStream< char32_t , OutputStdOut_t, ConvertingStream_t > out32StdOut;
+		OutputChannelComplete_t< Stream_t< char >, false > singleThreadChannel( 0, connectorSingle );
+		OutputStreamComplete_t< OutputFile_t< char32_t >, Stream_t< char32_t > > out32File( kUTF32Filename );
+		OutputStreamComplete_t< OutputStdOut_t< char32_t >, ConvertingStream_t< char32_t > > out32StdOut;
 		StreamList< char32_t > connectorMulti{ &out32File, &out32StdOut };
-		OutputChannel< char32_t, ConvertingStream_t > multiThreadMultiOut( 1, connectorMulti, true, SystemTimeStamp_t< char32_t >::GetInstance() );
+		OutputChannelComplete_t< ConvertingStream_t< char32_t >, true > multiThreadMultiOut( 0, connectorMulti, GetDefaultChannelSettings(), SystemTimeStamp_t< char32_t >::GetInstance() );
 
-		outCharSingle << "Multi Channel cleanup test ... " << 4.965 << ", " << 16384 << endl;
-		multiThreadMultiOut << U"UTF32 test" << endl;
+		outCharSingle << "Multi Channel cleanup test ... " << 4.965 << ", " << 16384 << std::endl;
+		multiThreadMultiOut << U"UTF32 test" << std::endl;
 	}
 #if defined( _MSC_VER )
 	_CrtMemCheckpoint( &exitState );
@@ -659,7 +661,8 @@ TEST_F( UTFChannelFiles, CheckUTF16ToUTF8Conversion )
 
 void EmptyThreadFunc( int milliSecondsToWait, StreamList< char >const & connector_ )
 {
-	OutputChannel< char > channel( DEFAULT, connector_, true );
+	
+	OutputChannelComplete_t< Stream_t< char >, true > channel( DEFAULT, connector_ );
 
 	system_clock::time_point start = system_clock::now();
 	system_clock::time_point wait = start + std::chrono::milliseconds( milliSecondsToWait );
@@ -667,14 +670,14 @@ void EmptyThreadFunc( int milliSecondsToWait, StreamList< char >const & connecto
 	{
 		//...
 	}
-	channel << "Worker thread writing to channel after settings altered by other thread. SHOULD NOT display" << endl;
+	channel << "Worker thread writing to channel after settings altered by other thread. SHOULD NOT display" << std::endl;
 }
 
 // check settings are consistent after delayed thread start and that thread reference count is as expected
 TEST_F( ThreadTester, TestMultithreadInitialisation )
 {
 	StreamSettings * settingsReference = g_AllChannelSettings;
-	uint8_t * flagsReference = g_channelInitFlags;
+	uint8_t * flagsReference = GetChannelInitFlags();
 
 	SettingsType modifiedEnable = 0;
 	SettingsType modifiedDefaultPriority = 6;
@@ -682,31 +685,31 @@ TEST_F( ThreadTester, TestMultithreadInitialisation )
 
 	StreamSettings nonStandardSettings = { modifiedEnable, modifiedDefaultPriority, modifiedFilter };
 
-	OutputChannel< char > channel( DEFAULT, m_connector, true );
+	OutputChannelComplete_t< Stream_t< char >, true > channel( DEFAULT, m_connector );
 
 	system_clock::time_point start = system_clock::now();
 	system_clock::time_point wait = start + system_clock::duration( std::chrono::seconds( 1 ) );
 
 	// inject new settings into the channel
-	channel << "This line should display on std::out" << endl;
-	channel << Enable( modifiedEnable ) << DefaultPriority( modifiedDefaultPriority ) << Filter( modifiedFilter ) << endl;
-	channel << "This line SHOULD NOT display" << endl;
+	channel << "This line should display on std::out" << std::endl;
+	channel << Enable( modifiedEnable ) << DefaultPriority( modifiedDefaultPriority ) << Filter( modifiedFilter ) << std::endl;
+	channel << "This line SHOULD NOT display" << std::endl;
 
 	while( system_clock::now() <= wait )
 	{
-		channel << "Waiting on timer..." << endl;
+		channel << Enable( 1 ) << Filter( 6 ) << "Waiting on timer..." << "\n" << Enable( modifiedEnable ) << Filter( modifiedFilter );
 		std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 	}
 	std::thread workerThreadOne( EmptyThreadFunc, 1000, m_connector );
 	std::thread workerThreadTwo( EmptyThreadFunc, 800, m_connector );
 	workerThreadTwo.join();
-	g_streamsMutex.lock();
-	bool allOK = 3 > g_channelInitFlags[ 0 ];
-	g_streamsMutex.unlock();
+	GetMasterChannelMutex().lock();
+	bool allOK = 3 > GetChannelInitFlags()[ 0 ];
+	GetMasterChannelMutex().unlock();
 	workerThreadOne.join();
-	g_streamsMutex.lock();
-	allOK &= 1 == g_channelInitFlags[ 0 ];
-	g_streamsMutex.unlock();
+	GetMasterChannelMutex().lock();
+	allOK &= 1 == GetChannelInitFlags()[ 0 ];
+	GetMasterChannelMutex().unlock();
 
 	SettingsType retrievedEnable = channel.GetEnable();
 	SettingsType retrievedPriority = channel.GetPriority();
@@ -723,25 +726,25 @@ TEST_F( ThreadTester, TestMultithreadInitialisation )
 TEST( GeneralTests, CheckOutputStamps )
 {
 	bool allOK;
-	uint8_t * flagsReference = g_channelInitFlags;
+	uint8_t * flagsReference = GetChannelInitFlags();
 
-	StreamStdOut< char > streamOne( nullptr, SystemTimeStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamOne( nullptr, GetDefaultChannelSettings(), SystemTimeStamp_t< char >::GetInstance() );
 	StreamList< char > connectorOne{ &streamOne };
-	streamOne << "Stream One writing to std::out before channels attached" << endl;
+	streamOne << "Stream One writing to std::out before channels attached" << std::endl;
 	{
-		OutputChannel< char > channelOne( DEFAULT, connectorOne, false, SystemTimeStamp_t<char>::GetInstance() );
-		OutputChannel< char > channelTwo( DEFAULT, connectorOne, false );
-		channelOne << "Channel One writing to std::out via Stream One using its own Timestamp" << endl;
-		streamOne << "Writing to Stream One directly with channels in use. This is safe in single thread mode. Timestamp will not appear though, as stream is currently flagged as in use by OutputChannels." << endl;
-		channelTwo << "Channel Two is a proxy using same channel ID and connector so I don't have to set up threads but with no Timestamp, also using Stream One" << endl;
-		channelOne << "Another line on Channel One" << endl;
+		OutputChannelComplete_t< Stream_t< char >, false > channelOne( DEFAULT, connectorOne, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelTwo( DEFAULT, connectorOne, GetDefaultChannelSettings() );
+		channelOne << "Channel One writing to std::out via Stream One using its own Timestamp" << std::endl;
+		streamOne << "Writing to Stream One directly with channels in use. This is safe in single thread mode. Timestamp will not appear though, as stream is currently flagged as in use by OutputChannels." << std::endl;
+		channelTwo << "Channel Two is a proxy using same channel ID and connector so I don't have to set up threads but with no Timestamp, also using Stream One" << std::endl;
+		channelOne << "Another line on Channel One" << std::endl;
 		std::streampos streamPosition = streamOne.tellp();
 		std::streampos c1Position = channelOne.tellp();
 		std::streampos c2Position = channelTwo.tellp();
 		allOK = static_cast< size_t >( streamPosition ) == 0 && c1Position > 0 && static_cast< size_t >( c2Position ) == 0;
 		allOK &= true == streamOne.GetIsChannelTarget();
 	}
-	streamOne << "Stream One writing to std::out following detachment of both channels. Its Timestamp, if used, is also restored at this point." << endl;
+	streamOne << "Stream One writing to std::out following detachment of both channels. Its Timestamp, if used, is also restored at this point." << std::endl;
 	std::streampos streamPosition = streamOne.tellp();
 	allOK &= streamPosition > 0;
 	allOK &= false == streamOne.GetIsChannelTarget();
@@ -750,26 +753,26 @@ TEST( GeneralTests, CheckOutputStamps )
 
 void SameIDThreadFunc( int threadNumber_, int channelNumber_, StreamList< char > const & connector_, OutputStamp&& stamp_, size_t msToRun_ )
 {
-	OutputChannel< char > channel( channelNumber_, connector_, true , stamp_ );
+	OutputChannelComplete_t< Stream_t< char >, true > channel( channelNumber_, connector_, GetDefaultChannelSettings(), stamp_ );
 
 	system_clock::time_point start = system_clock::now();
 	system_clock::time_point wait = start + std::chrono::milliseconds( msToRun_ );
 	while ( system_clock::now() <= wait )
 	{
-		channel << "Thread " << threadNumber_ << " writing to channel " << channelNumber_ << endl;
+		channel << "Thread " << threadNumber_ << " writing to channel " << channelNumber_ << std::endl;
 	}
 }
 
 TEST( GeneralTests, SameChannelIDsDifferentParams )
 {
 	bool allOK = true;
-	uint8_t * flagsReference = g_channelInitFlags;
+	uint8_t * flagsReference = GetChannelInitFlags();
 
 	// define three different streams
-	StreamStdOut< char > streamOne( nullptr, SystemTimeStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamOne( nullptr, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
 	// this one uses the LineStamp example class just to test a variable length stamp prefix
-	StreamStdOut< char > streamTwo( nullptr, LineStamp_t< char >::GetInstance() );
-	StreamFile< char > streamThree( kNarrowFilename, SystemTimeStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamTwo( nullptr, GetDefaultChannelSettings(), LineStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputFile_t< char >, Stream_t< char > > streamThree( kNarrowFilename, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
 	
 	// define two connectors to link the streams to channels. Both go to std::out via different streams, but one additionally sends to a file 
 	StreamList< char > connectorOne{ &streamOne };	
@@ -787,27 +790,28 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 		allOK &= false == streamOne.GetIsChannelTarget();
 		allOK &= false == streamTwo.GetIsChannelTarget();
 		// ensure no channels are marked as existing in the channel reference counters
-		g_streamsMutex.lock();
-		for ( auto i : g_channelInitFlags )
+		GetMasterChannelMutex().lock();
+		auto ptr = GetChannelInitFlags();
+		for( int i = 0; i < kMaxOutputChannels; ++i, ++ptr )
 		{
-			allOK &= i == 0;
+			allOK &= *ptr == 0;
 		}
-		g_streamsMutex.unlock();
+		GetMasterChannelMutex().unlock();
 	};
 
 	{
 		// create two channels using same channel ID but writing to different streams via their connectors
 		// The expected behaviour here is that they share channel filter flags but do not otherwise interfere with each other.
-		OutputChannel< char > channelOne( DEFAULT, connectorOne, false, SystemTimeStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelOne( DEFAULT, connectorOne, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
 		// same ID, different stream list, though both ultimately go to std::out by design
-		OutputChannel< char > channelTwo( DEFAULT, connectorTwo, false, SystemTimeStamp_t<char>::GetInstance() );
-		OutputChannel< char > channelThree( DEFAULT, connectorOne, false, LineStamp_t< char >::GetInstance() );
-		OutputChannel< char > channelFour( DEFAULT, connectorTwo, false, LineStamp_t< char >::GetInstance() );
-		channelOne << "Channel One..." << endl;
- 		channelTwo << "Channel Two, different stream but same ultimate target" << endl;
+		OutputChannelComplete_t< Stream_t< char >, false > channelTwo( DEFAULT, connectorTwo, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelThree( DEFAULT, connectorOne, GetDefaultChannelSettings(), LineStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelFour( DEFAULT, connectorTwo, GetDefaultChannelSettings(), LineStamp_t<char>::GetInstance() );
+		channelOne << "Channel One..." << std::endl;
+ 		channelTwo << "Channel Two, different stream but same ultimate target" << std::endl;
 		// filter out everything
-		channelOne << Filter( 0 ) << "Channel One - SHOULD NOT display" << endl;
-		channelOne << "Channel Two - SHOULD also NOT display" << endl;
+		channelOne << Filter( 0 ) << "Channel One - SHOULD NOT display" << std::endl;
+		channelOne << "Channel Two - SHOULD also NOT display" << std::endl;
 	    // reset filter to let everything through
  		channelOne << Filter( ~0 );
 	}
@@ -815,8 +819,8 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 	cleanupVerify();
 
 	// #TODO - these tests should go through a pipe to work out if the output is correct rather than rely on visuals for some aspects
-	streamOne << "Stream One after channel disconnect..." << endl;
-	streamTwo << "Stream Two after channel disconnect..." << endl;
+	streamOne << "Stream One after channel disconnect..." << std::endl;
+	streamTwo << "Stream Two after channel disconnect..." << std::endl;
 
 	// now create six worker threads that use one of the two stream connectors we defined earlier, use differing OutputStamps and have them spew to their channel objects
 	std::thread workerThreadOne( SameIDThreadFunc, 1, 0, connectorOne, SystemTimeStamp_t<char>::GetInstance(), 500 );
@@ -835,8 +839,8 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 	workerThreadFive.join();
 	workerThreadSix.join();
 
-	streamOne << "Stream One after all channels disconnect..." << endl;
-	streamTwo << "Stream Two after all channels disconnect..." << endl;
+	streamOne << "Stream One after all channels disconnect..." << std::endl;
+	streamTwo << "Stream Two after all channels disconnect..." << std::endl;
 
 	cleanupVerify();
 
@@ -850,18 +854,20 @@ TEST( StreamTests, TestConvertingStreamsAllStrings )
 	bool allOK;
 
 	// squirt the UTF8 strings through converting memory OutputTargets so they go through of all conversion permutations and then compare the final result against the first buffer
-	StreamMem< char > strReference;
-	StreamMem< wchar_t, ConvertingStream_t > streamWide;
-	StreamMem< char16_t, ConvertingStream_t > strUTF16;
-	StreamMem< char32_t, ConvertingStream_t > strUTF32;
-	StreamMem< char, ConvertingStream_t > strDestination;
+	OutputStreamComplete_t< OutputMem_t< char >, Stream_t< char > > strReference;
+	OutputStreamComplete_t< OutputMem_t< wchar_t >, ConvertingStream_t< wchar_t > > streamWide;
+	OutputStreamComplete_t< OutputMem_t< char16_t >, ConvertingStream_t< char16_t > > strUTF16;
+	OutputStreamComplete_t< OutputMem_t< char32_t >, ConvertingStream_t< char32_t > > strUTF32;
+	OutputStreamComplete_t< OutputMem_t< char >, ConvertingStream_t< char > > strDestination;
 
 	// help for the debugger to see the memory buffers and because I need to reset them
- 	OutputMem_t< char >& baseRef = strReference.GetOutputTarget();
- 	OutputMem_t< wchar_t >& wideMemRef = streamWide.GetOutputTarget();
- 	OutputMem_t< char16_t >& sixteenRef = strUTF16.GetOutputTarget();
- 	OutputMem_t< char32_t >& thirtytwoRef = strUTF32.GetOutputTarget();
- 	OutputMem_t< char >& destRef = strDestination.GetOutputTarget();
+	
+	OutputMem_t< char >& baseRef = static_cast< OutputMem_t< char > & >( strReference.GetOutputTarget() );
+ 	OutputMem_t< wchar_t >& wideMemRef = static_cast< OutputMem_t< wchar_t > & >( streamWide.GetOutputTarget() );
+ 	OutputMem_t< char16_t >& sixteenRef = static_cast< OutputMem_t< char16_t > & >( strUTF16.GetOutputTarget() );
+ 	OutputMem_t< char32_t >& thirtytwoRef = static_cast< OutputMem_t< char32_t > & >( strUTF32.GetOutputTarget() );
+ 	OutputMem_t< char > & destRef = static_cast< OutputMem_t< char > & >( strDestination.GetOutputTarget() );
+	
 
 	// first send the UTF8 strings into the reference.
 	size_t numStrings = sizeof( AllUTF8Strings ) / sizeof( char const * );

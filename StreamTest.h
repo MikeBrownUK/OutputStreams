@@ -1,11 +1,12 @@
 //////////////////////////////////////////////////////////////////////////
-/// Mike Brown, 2022
+/// Mike Brown, 2022-2026
 ///
 /// Filename:	StreamTest.h
 /// Created:	16/8/2022
 /// Author:		Mike
 /// 
 /// Description: Test framework for OutputStreams
+///				 Release 1.5
 ///
 //////////////////////////////////////////////////////////////////////////
 
@@ -14,7 +15,10 @@
 #define StreamTest_DEFINED_16_8_2022
 
 #include "gtest/gtest.h"
-#include "OutputStreams/StreamAndChannelAliases.h"
+#include "OutputStreams/OutputChannels.h"
+
+template< typename T_ >
+using StreamList = std::vector < mbp::streams::BasicStream_t< T_ >* >;
 
 using namespace mbp::streams;
 
@@ -54,12 +58,12 @@ class SingleChannelFile
 public:
 	SingleChannelFile( char const * filename_ )
 		: m_stream( filename_ )
-		, m_connector( StreamList< T_ >( { &m_stream } ) )
-		, m_channel( 0, m_connector, true )
+		, m_connector( StreamList< typename T_::elem >( { &m_stream } ) )
+		, m_channel( 0, m_connector )
 	{}
-	StreamList< T_ > m_connector;
-	OutputStream< T_, OutputFile_t > m_stream;
-	OutputChannel< T_ > m_channel;
+	StreamList< typename T_::elem > m_connector;
+	OutputStreamComplete_t< OutputFile_t< typename T_::elem>, T_ > m_stream;
+	OutputChannelComplete_t< T_ > m_channel;
 };
 
 class UTFChannelFiles : public TestUsingFiles
@@ -73,11 +77,11 @@ public:
 		, m_fileUTF16Ref( kUTF16ReferenceFilename )
 #endif // #if defined( _MSC_VER )
 	{}
-	SingleChannelFile< char > m_fileUTF8;
-	SingleChannelFile< char > m_fileUTF8Ref;
+	SingleChannelFile< Stream_t< char > > m_fileUTF8;
+	SingleChannelFile< Stream_t< char > > m_fileUTF8Ref;
 #if defined( _MSC_VER )
-	SingleChannelFile< wchar_t > m_fileUTF16;
-	SingleChannelFile< wchar_t > m_fileUTF16Ref;
+	SingleChannelFile< Stream_t< wchar_t > > m_fileUTF16;
+	SingleChannelFile< Stream_t< wchar_t > > m_fileUTF16Ref;
 #endif // #if defined( _MSC_VER )
 };
 
@@ -85,10 +89,10 @@ class ThreadTester : public TestUsingFiles
 {
 protected:
 	ThreadTester()
-		: m_output( nullptr, SystemTimeStamp_t< char >::GetInstance() )
+		: m_output( "", GetDefaultChannelSettings(), OutputStamp::GetDummyStamp() )
 		, m_connector{ &m_output }
 	{}
-	OutputStream< char, OutputStdOut_t > m_output;
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > m_output;
 	StreamList< char > m_connector;
 };
 

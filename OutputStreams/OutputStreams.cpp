@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
-/// Mike Brown, 2014-2022
+/// ©Mike Brown, 2014-2026
+/// https://www.mikebrown.co.uk
 ///
 ///	Filename: 	OutputStreams.cpp
 ///	Created:	31/12/2014
@@ -30,6 +31,8 @@ namespace mbp
 			};
 			return kDefaultSettings;
 		}
+
+#if !defined( OUTPUT_STREAM_STRIP )
 
 		//////////////////////////////////////////////////////////////////////////
 		// Conversion functions called by ConvertingStream_t operator <<
@@ -247,6 +250,8 @@ namespace mbp
 			}
 			return stream_;
 		}
-#endif //#if defined( __linux )...
+#endif //#if defined( __linux )..
+		
+#endif //#if !defined( OUTPUT_STREAM_STRIP ).
 	}
 }

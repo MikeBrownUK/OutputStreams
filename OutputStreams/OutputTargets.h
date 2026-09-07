@@ -1,5 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
-/// Mike Brown, 2022
+/// ©Mike Brown, 2014-2026
+/// https://www.mikebrown.co.uk
 ///
 ///	Filename: 	OutputTargets.h
 ///	Created:	21/06/2022
@@ -28,11 +29,20 @@ namespace mbp
 {
 	namespace streams
 	{
-		// Output to a File
-		template< typename ELEM_ >
-		class OutputFile_t
+		class OutputTarget
 		{
 		public:
+			OutputTarget() = default;
+			virtual ~OutputTarget() = default;
+			virtual void Output( void const* output_, uint32_t numCharacters_, uint32_t numBytes_ ) {}
+		};
+
+		// Output to a File
+		template< typename ELEM_ >
+		class OutputFile_t : public OutputTarget
+		{
+		public:
+			using elem = ELEM_;
 			OutputFile_t( char const * const initString_ )
 				: m_opened( false )
 			{
@@ -55,8 +65,10 @@ namespace mbp
 			}
 
 			// Output uses kernel calls to write the buffer to a file due to the bemusing way the standard libraries natively (don't) handle wide character file output 
-			void Output( ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+			virtual void Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ ) override
 			{
+				ELEM_ const* output_ = static_cast< ELEM_ const* >( output );
+
 				if ( !m_opened )
 					OpenAndTruncate();
 				if ( m_opened )
@@ -93,26 +105,30 @@ namespace mbp
 	
 		// Output to std::cout or std::wcout (latter requires USE_STD_WCOUT defined)
 		template< typename ELEM_ >
-		class OutputStdOut_t
+		class OutputStdOut_t : public OutputTarget
 		{
 		public:
+			using elem = ELEM_;
 			OutputStdOut_t( char const * const initString_ = nullptr )
 			{}
-			void Output( ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+			virtual void Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ ) override
 			{
-				std::cout.write( reinterpret_cast< char const * >( output_ ), numCharacters_ * sizeof( ELEM_ ) );
+				elem const* output_ = static_cast< elem const* >( output );
+				std::cout.write( reinterpret_cast< char const * >( output_ ), numCharacters_ * sizeof( elem ) );
 				std::cout.flush();
 			}
 		};
 	
 		template<>
-		inline void OutputStdOut_t< wchar_t >::Output( wchar_t const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+		inline void OutputStdOut_t< wchar_t >::Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ )
 		{
+			wchar_t const* output_ = static_cast< wchar_t const* >( output );
+
 #if defined ( USE_STD_WCOUT )
 			std::wcout.write( output_, numCharacters_ );
 			std::wcout.flush();
 #else
-			std::cout.write( reinterpret_cast< char const * >( output_ ), numCharacters_ * sizeof( wchar_t ) );
+			std::cout.write( reinterpret_cast< char const * >( output_ ), static_cast< size_t >( numCharacters_ ) * sizeof( wchar_t ) );
 			std::cout.flush();
 #endif // #if defined( _MSC_VER )
 		}
@@ -121,9 +137,10 @@ namespace mbp
 		auto constexpr kInitialChunkSize = 1024;
 		auto constexpr kMaxBeforeAddition = kInitialChunkSize * kInitialChunkSize;
 		template< typename ELEM_ >
-		class OutputMem_t
+		class OutputMem_t : public OutputTarget
 		{
 		public:
+			using elem = ELEM_;
 			OutputMem_t( char const * const initString_ )
 				: m_currentSize( kInitialChunkSize )
 				, m_pBase( nullptr )
@@ -141,7 +158,7 @@ namespace mbp
 					newSize = oldSize < kMaxBeforeAddition ? oldSize << 1 : oldSize + kMaxBeforeAddition;
 				}
 
-				ELEM_ * pNewBuff = reinterpret_cast< ELEM_ * >( std::malloc( newSize ) );
+				elem* pNewBuff = reinterpret_cast< elem* >( std::malloc( newSize ) );
 				if ( pNewBuff )
 				{
 					memcpy( pNewBuff, m_pBase, m_offset );
@@ -164,7 +181,7 @@ namespace mbp
 			}
 			void Allocate( size_t newSize_ = kInitialChunkSize )
 			{
-				m_pBase = reinterpret_cast< ELEM_ * >( std::malloc( newSize_ ) );
+				m_pBase = reinterpret_cast< elem* >( std::malloc( newSize_ ) );
 				m_currentSize = newSize_;
 			}
 			void Release()
@@ -174,25 +191,27 @@ namespace mbp
 				m_pBase = nullptr;
 				m_currentSize = m_offset = 0;
 			}
-			~OutputMem_t()
+			virtual ~OutputMem_t()
 			{
 				Release();
 			}
-			void Output( ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+			virtual void Output( elem const * output, uint32_t numCharacters_, uint32_t numBytes_ )
 			{
+				elem const* output_ = static_cast< elem const* >( output );
+
 				if( m_offset + numBytes_ >= m_currentSize )
 					Grow( numBytes_ - ( m_currentSize - m_offset ) );
 				memcpy( reinterpret_cast< char * >( m_pBase ) + m_offset, output_, numBytes_ );
 				m_offset += numBytes_;
 			}
-			ELEM_ const * GetBase() const { return m_pBase; }
-			ELEM_ const * GetPtr() const { return reinterpret_cast< char const * >( m_pBase ) + m_offset; }
+			elem const * GetBase() const { return m_pBase; }
+			elem const * GetPtr() const { return reinterpret_cast< elem const * >( reinterpret_cast< char const * >( m_pBase ) + m_offset ); }
 			size_t GetSize() const { return m_currentSize; }
 			size_t GetRemaining() const { return m_currentSize - m_offset; }
 		private:
 			size_t m_currentSize;
 			size_t m_offset;
-			ELEM_ * m_pBase;
+			elem* m_pBase;
 		};
 
 		/////////////////////////////////////////
@@ -202,28 +221,25 @@ namespace mbp
 #if defined(_MSC_VER)
 		// output to the Windows debugger (usually Visual Studio's output window)
 		template< typename ELEM_ >
-		class OutputDevStudio_t
+		class OutputDevStudio_t : public OutputTarget
 		{
 		public:
+			using elem = ELEM_;
 			OutputDevStudio_t( char const * const initString_ = nullptr )
 			{}
-			void Output( ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+			virtual void Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ ) override
 			{
-				OutputDebugStringW( output_ );
+				elem const* output_ = static_cast< elem const* >( output );
+				OutputDebugString( output_ );
 			}
 		};
 
-		template<>
-		inline void OutputDevStudio_t< char >::Output( char const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
-		{
-			OutputDebugStringA( output_ );
-		}
-
 		// output to console window - Windows
 		template< typename ELEM_ >
-		class OutputConsole_t
+		class OutputConsole_t : public OutputTarget
 		{
 		public:
+			using elem = ELEM_;
 			OutputConsole_t( char const * const initString_ = nullptr )
 				: m_bDetach( true )
 			{
@@ -248,14 +264,16 @@ namespace mbp
 
 			}
 
-			~OutputConsole_t()
+			virtual ~OutputConsole_t()
 			{
 				if( m_bDetach )
 					FreeConsole();
 			}
 
-			inline void Output( typename ELEM_ const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+			virtual inline void Output( typename void const * output, uint32_t numCharacters_, uint32_t numBytes_ ) override
 			{
+				elem const* output_ = static_cast< elem const* >( output );
+
 				DWORD dTemp;
 				WriteConsoleW( m_hOutput, output_, numCharacters_, &dTemp, NULL );
 			}
@@ -281,8 +299,10 @@ namespace mbp
 		};
 
 		template<>
-		inline void OutputConsole_t< char >::Output( char const * output_, uint32_t numCharacters_, uint32_t numBytes_ )
+		inline void OutputConsole_t< char >::Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ )
 		{
+			char const* output_ = static_cast< char const* >( output );
+
 			DWORD dTemp;
 			WriteConsoleA( m_hOutput, output_, numCharacters_, &dTemp, NULL );
 		}
