@@ -53,6 +53,7 @@ namespace mbp
 		{
 		public:
 			using elem = typename STREAMBASE_::elem;
+			using base = STREAMBASE_;
 
 			OutputChannel_t( BasicBuffer_t< elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< elem > * > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultChannelSettings(), bool bCleanupBuffer = false )
 				: STREAMBASE_( pBuffer_ )
@@ -82,7 +83,7 @@ namespace mbp
 			{
 				size_t index;
 				if( m_bCleanup )
-					delete rdbuf();
+					delete base::rdbuf();
 				{
 					GetMasterChannelMutex().lock();
 					--GetChannelInitFlags()[ m_channelId ];
@@ -117,7 +118,7 @@ namespace mbp
 		protected:
 			using elem = ELEM_;
 			using traits = std::char_traits < elem >;
-			using base = std::basic_stringbuf< elem, traits, std::allocator< elem > >;
+			using base = BasicBuffer_t< ELEM_ >;
 		public:
 			ChannelBuffer_t( int channelID_, std::vector< BasicStream_t< elem > * >const & shared_, OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: BasicBuffer_t< ELEM_ >( m_dummyTarget )
@@ -136,7 +137,7 @@ namespace mbp
 				{
 					base::sputc( 'C' );
 				}
-				m_cToNext = m_stamp.GetMaxLength();
+				base::m_cToNext = m_stamp.GetMaxLength();
 				
 			}
 			virtual ~ChannelBuffer_t()	
@@ -217,7 +218,7 @@ namespace mbp
 
 										if ( numSentToStream == 1 )
 										{
-											elem lastChar = *( pptr() - 1 );
+											elem lastChar = *( base::pptr() - 1 );
 											// don't timestamp lines with carriage return only
 											if ( lastChar == '\n' )
 											{
@@ -245,10 +246,10 @@ namespace mbp
 					}
 					else
 					{
-						m_cToNext = base::pptr() - base::pbase();	// update buffer count but don't output at all
+						base::m_cToNext = base::pptr() - base::pbase();	// update buffer count but don't output at all
 					}
 				}
-				base::setp( base::pbase(), base::pbase() + m_cToNext, base::epptr() );
+				base::pbump( base::m_cToNext - static_cast< int >( base::pptr() - base::pbase() ) );
 				return 0;
 			}
 
@@ -256,7 +257,7 @@ namespace mbp
 			{
 				if ( !m_bInitialised )
 					PerformInit();
-				m_cToNext = m_stamp.GetMaxLength();
+				base::m_cToNext = m_stamp.GetMaxLength();
 				flush( true );
 				g_AllChannelSettings[ m_channelID ].SetPriority( g_AllChannelSettings[ m_channelID ].GetDefaultPriority() );
 				return 0;
@@ -289,16 +290,16 @@ namespace mbp
 			{	
 				bool bWriteStamp = true;
 				BasicStream_t< elem >* strm;
-				auto maxLength = m_stamp.GetMaxLength();
-				auto stampLength = m_stamp.GetLength();
+				auto maxLength = base::m_stamp.GetMaxLength();
+				auto stampLength = base::m_stamp.GetLength();
 				auto offset = maxLength - stampLength;
 				auto numSentToStream = base::pptr() - base::pbase() - maxLength;
 				auto numToOutput = numSentToStream + stampLength;
 				
-				if ( g_AllChannelSettings[ m_channelID ].CanBeOutput() )
+				if ( g_AllChannelSettings[ base::m_channelID ].CanBeOutput() )
 				{
 					if ( bIsStreamFlush == false )
-						m_cToNext = base::pptr() - base::pbase();
+						base::m_cToNext = base::pptr() - base::pbase();
 					else
 					{
 						for ( auto i : base::m_streamIndices )
@@ -310,7 +311,7 @@ namespace mbp
 								{
 									if ( numToOutput == ( maxLength - offset ) + 1 )
 									{
-										elem lastChar = *( pptr() - 1 );
+										elem lastChar = *( base::pptr() - 1 );
 										// don't timestamp lines with carriage return only
 										if ( lastChar == '\n' )
 										{
@@ -320,16 +321,16 @@ namespace mbp
 										}
 									}
 									if( bWriteStamp )
-										m_stamp.WriteStamp( base::pbase() + offset );
+										base::m_stamp.WriteStamp( base::pbase() + offset );
 									strm->write( base::pbase() + offset, numToOutput );
 									strm->flush();
-									g_AllChannelSettings[ m_channelID ].SetPriority( g_AllChannelSettings[ m_channelID ].GetDefaultPriority() );
+									g_AllChannelSettings[ base::m_channelID ].SetPriority( g_AllChannelSettings[ base::m_channelID ].GetDefaultPriority() );
 								}
 							}
 						}
 					}
 				}
-				base::setp( base::pbase(), base::pbase() + m_cToNext, base::epptr() );
+				base::pbump( base::m_cToNext - static_cast< int >( base::pptr() - base::pbase() ) );
 				
 				return 0;
 			}
@@ -339,7 +340,7 @@ namespace mbp
 		class OutputChannelComplete_t : public OutputChannel_t< T_ >
 		{
 		public:
-			OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: OutputChannel_t< T_ >( &m_buffer, channelID_, streams_, MULTITHREAD_, initSettings_ )
 				, m_buffer( channelID_, streams_, stamp_ )
 			{

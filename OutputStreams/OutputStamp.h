@@ -29,7 +29,7 @@ namespace mbp
 			virtual int WriteStamp( void * ptr_ = nullptr ) { return 0; }
 			virtual void Lock() {}
 			virtual void Unlock() {}
-			static OutputStamp & GetDummyStamp()
+			static OutputStamp& GetDummyStamp()
 			{
 				static thread_local OutputStamp instance;
 				return instance;

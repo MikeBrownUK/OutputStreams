@@ -1,4 +1,5 @@
 //////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
 /// ©Mike Brown, 2014-2026
 /// https://www.mikebrown.co.uk
 ///
@@ -26,6 +27,7 @@
 #include <cstring>
 #endif
 #include <vector>
+#include <streambuf>
 
 #include "OutputTargets.h"
 #include "OutputStamp.h"
@@ -158,6 +160,7 @@ namespace mbp
 		{
 		public:
 			using elem = ELEM_;
+			using base = std::basic_ostream< ELEM_, std::char_traits< ELEM_ > >;
 			BasicStream_t( BasicBuffer_t< elem > * buffer_ )
 				: std::basic_ostream< elem, std::char_traits< elem > >( buffer_ )
 			{
@@ -165,19 +168,19 @@ namespace mbp
 			virtual ~BasicStream_t() {}
 
 			// buffer forwarders
-			virtual void Enable( SettingsType enable_ ) { static_cast< BasicBuffer_t< elem > * >( rdbuf() )->Enable( enable_ ); }
-			virtual void SetPriority( SettingsType newPriority_ ) { static_cast< BasicBuffer_t< elem >* >( rdbuf() )->SetPriority( newPriority_ ); }
-			virtual void SetDefaultPriority( SettingsType newDefault_ ) { static_cast< BasicBuffer_t< elem >* >( rdbuf() )->SetDefaultPriority( newDefault_ ); }
-			virtual void SetFilter( SettingsType newCap_ ) { static_cast< BasicBuffer_t< elem >* >( rdbuf() )->SetFilter( newCap_ ); }
-			virtual SettingsType GetEnable() { return static_cast< BasicBuffer_t< elem > * >( rdbuf() )->GetEnable(); }
-			virtual SettingsType GetPriority() { return static_cast< BasicBuffer_t< elem > * >( rdbuf() )->GetPriority(); }
-			virtual SettingsType GetDefaultPriority() { return static_cast< BasicBuffer_t< elem >* >( rdbuf() )->GetDefaultPriority(); }
-			virtual SettingsType GetFilter() { return static_cast< BasicBuffer_t< elem > * >( rdbuf() )->GetFilter(); }
+			virtual void Enable( SettingsType enable_ ) { static_cast< BasicBuffer_t< elem > * >( base::rdbuf() )->Enable( enable_ ); }
+			virtual void SetPriority( SettingsType newPriority_ ) { static_cast< BasicBuffer_t< elem >* >( base::rdbuf() )->SetPriority( newPriority_ ); }
+			virtual void SetDefaultPriority( SettingsType newDefault_ ) { static_cast< BasicBuffer_t< elem >* >( base::rdbuf() )->SetDefaultPriority( newDefault_ ); }
+			virtual void SetFilter( SettingsType newCap_ ) { static_cast< BasicBuffer_t< elem >* >( base::rdbuf() )->SetFilter( newCap_ ); }
+			virtual SettingsType GetEnable() { return static_cast< BasicBuffer_t< elem > * >( base::rdbuf() )->GetEnable(); }
+			virtual SettingsType GetPriority() { return static_cast< BasicBuffer_t< elem > * >( base::rdbuf() )->GetPriority(); }
+			virtual SettingsType GetDefaultPriority() { return static_cast< BasicBuffer_t< elem >* >( base::rdbuf() )->GetDefaultPriority(); }
+			virtual SettingsType GetFilter() { return static_cast< BasicBuffer_t< elem > * >( base::rdbuf() )->GetFilter(); }
 			void SetIsChannelTarget( bool isShared_ ) { 
-				BasicBuffer_t< elem >* buf = static_cast< BasicBuffer_t< elem > * >( rdbuf() );
+				BasicBuffer_t< elem >* buf = static_cast< BasicBuffer_t< elem > * >( base::rdbuf() );
 				buf->SetIsChannelTarget( isShared_ );
 			}
-			bool GetIsChannelTarget() { return static_cast< BasicBuffer_t< elem > * >( rdbuf() )->GetIsChannelTarget(); }
+			bool GetIsChannelTarget() { return static_cast< BasicBuffer_t< elem > * >( base::rdbuf() )->GetIsChannelTarget(); }
 
 			// access functions when the stream is a shared target
 			void Lock() { m_lock.lock(); }
@@ -222,9 +225,10 @@ namespace mbp
 		template < class ELEM_ >
 		class BasicBuffer_t : public std::basic_stringbuf< ELEM_, std::char_traits< ELEM_ >, std::allocator< ELEM_ > >
 		{
+		public:
 			using elem = ELEM_;
 			using base = std::basic_stringbuf< elem, std::char_traits< elem >, std::allocator< ELEM_ > >;
-		public:
+
 			BasicBuffer_t( OutputTarget& target_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: std::basic_stringbuf< ELEM_, std::char_traits< ELEM_ >, std::allocator< ELEM_ > >( )
 				, m_outputTarget( target_ )
@@ -270,7 +274,8 @@ namespace mbp
 			virtual ~BasicBuffer_t() {}
 			void SetOriginalBufferStart()
 			{
-				base::setp( base::pbase(), base::pbase(), base::epptr() );
+				base::setp( base::pbase(), base::epptr() );
+				base::pbump( -static_cast< int >( base::pptr() - base::pbase() ) );
 				m_cToNext = 0;
 			}
 
@@ -303,7 +308,7 @@ namespace mbp
 						{
 							if ( numToOutput == ( maxLength - offset ) + 1 )
 							{
-								elem lastChar = *( pptr() - 2 );
+								elem lastChar = *( base::pptr() - 2 );
 								// don't timestamp lines with carriage return only
 								if ( lastChar == '\n' )
 								{
@@ -321,7 +326,7 @@ namespace mbp
 					else
 						m_cToNext = base::pptr() - base::pbase();	// update count but don't output
 				}
-				base::setp( base::pbase(), base::pbase() + m_cToNext, base::epptr() );
+				base::pbump( m_cToNext - static_cast< int >( base::pptr() - base::pbase() ) );
 				return 0;
 			}
 			virtual int sync() override
@@ -370,7 +375,7 @@ namespace mbp
 		};
 
 		template < typename ELEM_ >
-		class NoOutput_t : public BasicBuffer_t< typename ELEM_ >
+		class NoOutput_t : public BasicBuffer_t< ELEM_ >
 		{
 		public:
 			using elem = ELEM_;
@@ -386,7 +391,7 @@ namespace mbp
 			virtual int sync() override
 			{
 				// just empty
-				base::setp( base::pbase(), base::pbase(), base::epptr() );
+				base::pbump( -static_cast< int >( base::pptr() - base::pbase() ) );
 				return 0;
 			}
 			virtual ~NoOutput_t() = default;
@@ -460,7 +465,7 @@ namespace mbp
 
 		private:
 			OutputStream_t< STREAMBASE_ > * m_prevStream;
-			std::basic_streambuf< elem, std::char_traits< elem > > * m_prevStreamBuf;
+			std::basic_stringbuf< elem, std::char_traits< elem > > * m_prevStreamBuf;
 
 			OutputStreamCapture_t() = delete;
 			OutputStreamCapture_t( OutputStreamCapture_t const & other_ ) = delete;
@@ -472,7 +477,7 @@ namespace mbp
 		{
 		public:
 			OutputStreamComplete_t( char const* const initString_ = nullptr, StreamSettings& settings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
-				: OutputStream_t( &m_buffer )
+				: OutputStream_t< U_ >( &m_buffer )
 				, m_buffer( initString_, settings_, stamp_ )
 			{
 			}
@@ -482,11 +487,11 @@ namespace mbp
 		};
 
 		template< typename T_, typename U_ = Stream_t< typename T_::elem  > >
-		class NoOutputStreamComplete_t : public OutputStream_t< typename U_ >
+		class NoOutputStreamComplete_t : public OutputStream_t< U_ >
 		{
 		public:
 			NoOutputStreamComplete_t( StreamSettings& settings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
-				: OutputStream_t( &m_buffer )
+				: OutputStream_t< U_ >( &m_buffer )
 				, m_buffer( settings_, stamp_ )
 			{
 			}
@@ -602,7 +607,7 @@ namespace mbp
 			template< typename T_ >
 			ConvertingStream_t< T_ >& operator()( ConvertingStream_t< T_ >& strm_ ) const
 			{
-				BasicBuffer_t< typename T_ >* ptr = static_cast< BasicBuffer_t< typename T_ > * >( strm_.rdbuf() );
+				BasicBuffer_t< T_ >* ptr = static_cast< BasicBuffer_t< T_ > * >( strm_.rdbuf() );
 				ptr->flush();
 				ptr->SetFilter( payload_ );
 				return strm_;
@@ -610,7 +615,7 @@ namespace mbp
 			template< typename T_ >
 			Stream_t< T_ >& operator()( Stream_t< T_ >& strm_ ) const
 			{
-				BasicBuffer_t< typename T_ >* ptr = static_cast< BasicBuffer_t< typename T_ > * >( strm_.rdbuf() );
+				BasicBuffer_t< T_ >* ptr = static_cast< BasicBuffer_t< T_ > * >( strm_.rdbuf() );
 				ptr->flush();
 				ptr->SetFilter( payload_ );
 				return strm_;
@@ -628,7 +633,7 @@ namespace mbp
 		template< typename T_ >
 		inline Stream_t< T_ >& endl( Stream_t< T_ >& strm_ )
 		{
-			std::basic_ostream< typename T_, std::char_traits< typename T_> >& baseCast = static_cast< std::basic_ostream< typename T_, std::char_traits< typename T_ > >& >( strm_ );
+			std::basic_ostream< T_, std::char_traits< T_ > >& baseCast = static_cast< std::basic_ostream< T_, std::char_traits< T_ > >& >( strm_ );
 			endl( baseCast );
 			return strm_;
 		}
@@ -1021,6 +1026,12 @@ namespace mbp
 		{
 			return stream_;
 		}
+
+		template< typename T_ >
+		NullStream_t<T_>& endl( NullStream_t<T_>& strm_ )
+		{
+			return strm_;
+		}	
 
 		template< typename T_, typename U_ = Stream_t< typename T_::elem > >
 		class OutputStreamComplete_t : public U_

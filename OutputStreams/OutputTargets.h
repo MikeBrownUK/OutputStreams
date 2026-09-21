@@ -158,9 +158,10 @@ namespace mbp
 					newSize = oldSize < kMaxBeforeAddition ? oldSize << 1 : oldSize + kMaxBeforeAddition;
 				}
 
-				elem* pNewBuff = reinterpret_cast< elem* >( std::malloc( newSize ) );
+				elem* pNewBuff = reinterpret_cast< elem* >( std::malloc( newSize ) );				
 				if ( pNewBuff )
 				{
+					memset( pNewBuff, 0xBC, newSize );
 					memcpy( pNewBuff, m_pBase, m_offset );
 					m_currentSize = newSize;
 					std::free( m_pBase );
@@ -182,6 +183,8 @@ namespace mbp
 			void Allocate( size_t newSize_ = kInitialChunkSize )
 			{
 				m_pBase = reinterpret_cast< elem* >( std::malloc( newSize_ ) );
+				if( m_pBase )
+					memset( m_pBase, 0xBC, newSize_ );
 				m_currentSize = newSize_;
 			}
 			void Release()
@@ -195,7 +198,7 @@ namespace mbp
 			{
 				Release();
 			}
-			virtual void Output( elem const * output, uint32_t numCharacters_, uint32_t numBytes_ )
+			virtual void Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ ) override
 			{
 				elem const* output_ = static_cast< elem const* >( output );
 
@@ -299,7 +302,7 @@ namespace mbp
 		};
 
 		template<>
-		inline void OutputConsole_t< char >::Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ )
+		inline void OutputConsole_t< char >::Output( void const * output, uint32_t numCharacters_, uint32_t numBytes_ ) override
 		{
 			char const* output_ = static_cast< char const* >( output );
 

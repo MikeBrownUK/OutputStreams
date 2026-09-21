@@ -101,7 +101,7 @@ u8R"(Kannada poetry by Kuvempu — ಬಾ ಇಲ್ಲಿ ಸಂಭವಿಸು
 ಭವ ಭವದಿ ಭತಿಸಿಹೇ ಭವತಿ ದೂರ
 ನಿತ್ಯವೂ ಅವತರಿಪ ಸತ್ಯಾವತಾರ || ಬಾ ಇಲ್ಲಿ ||)";
 
-const char * AllUTF8Strings[] =
+const char* AllUTF8Strings[] =
 {
 		utf8StringOne
 	,	utf8StringTwo
@@ -356,6 +356,9 @@ TEST( InitAndCleanupTests, CheckChannelCleanup_Single )
 #endif
 }
 
+// No cleanup test for Linux at present
+#if defined( _MSC_VER )
+
 TEST( InitAndCleanupTests, CheckMany )
 {
 #if defined( _MSC_VER )
@@ -380,6 +383,8 @@ TEST( InitAndCleanupTests, CheckMany )
 	CleanupFiles();
 #endif
 }
+
+#endif
 
 TEST_F( UTFChannelFiles, CheckUTF8EncodingsViaFile )
 {
