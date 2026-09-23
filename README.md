@@ -5,11 +5,17 @@ No UML accompanies this release due to time constraints. The differences to vers
 Changes from OutputStreams 1.0
 
 StreamsAndChannelAliases.h has been removed, therefore the type names OutputStream<> and OutputChannel<> are no more. Please use OutputStream_t<> and OutputChannel_t<> and include “OutputChannels.h” to access all library objects. Keeping the codebase small encourages my further development, nomenclature choices are often personal preference and it's very easy to add aliases in client code should you wish.
+
 Following on from the above: when I mention OutputStreams or OutputChannels, I'm talking generally about instances of objects declared with the OutputStream_t and OutputChannel_t templates.
+
 New guidelines for referencing stream objects globally. References should be to one of the two STREAMBASE template types that OutputStream_t and OutputChannel_t derive from: either Stream_t< CHAR_TYPE > (general use) or ConvertingStream_t< CHAR_TYPE > (for dynamic conversion of non-native strings). Such a reference can point at any OutputStream or OutputChannel declared using the same STREAMBASE.
+
 The preprocessor define to encourage the compiler to strip away OutputStreams code and all literals sent to your streams is now “OUTPUT_STREAM_STRIP”. This seemed a sensible naming change.
+
 GetDefaultChannelSettings() has been renamed GetDefaultStreamSettings(), reason as above.
+
 You can either create your own buffer objects to pass to OutputStream_t and OutputChannel_t constructors or use the new OutputStreamComplete_t and OutputChannelComplete_t templates which have built-in buffers - this is the easiest option for most users.
+
 Global scope OutputChannels in multi-thread environments should now be declared thread_local (including OutputChannelComplete_t). During this iteration I discovered that Microsoft's basic_stringbuf<> class causes an on-exit memory leak to be reported when declared thread_local. Whether this is a bug in their current implementation of basic_stringbuf<>, the compiler itself or a CRT_ALLOC... leak reporting quirk is something I can't answer at present. The leak report suggests a container or list allocation of some sort. It's just a few bytes but I don't enjoy memory leak squirt from my programs at exit, so I do hope they can fix this. It shouldn't bother library users but be aware of this buggy behaviour.
 
 Other important notes
@@ -18,9 +24,9 @@ Please continue to use the library's streams::endl manipulator in place of std::
 
 As an example of the std::endl issue, please consider:
 
-myStream << SetDefaultPriority( 0 ); // the default
+myStream << DefaultPriority( 0 ); // the default
 
-myStream << SetFilter( 4 ) << Priority( 4 ) << “All output now has priority 4 until next flush. Current stream filter permits priorities 0-4, so this text will reach output destination” << endl << Priority( 5 ) << “This text would be on a new line, following flush and with priority reset to 0, but as we have injected a new priority level, 5, this text segment will actually be discarded” << endl;
+myStream << Filter( 4 ) << Priority( 4 ) << “All output now has priority 4 until next flush. Current stream filter permits priorities 0-4, so this text will reach output destination” << endl << Priority( 5 ) << “This text would be on a new line, following flush and with priority reset to 0, but as we have injected a new priority level, 5, this text segment will actually be discarded” << endl;
 
 The above works correctly, outputting the first text line and rejecting the second but if you were to change the first endl (actually a mbp::streams::endl) to std::endl, the second segment would reach the output target too, because the stream reference has become a basic_ostream<> reference at that point and the Priority(5) manipulator and any other OutputStream behaviour you might expect after that just won't occur.
 
@@ -30,13 +36,13 @@ Note that the std::endl issue may change the result of any text and strings chai
 
 In summrary: Default, std::basic_ostream<> behaviour rules beyond the first appearance of any std::endl in a single statement – at least for now.
 
-Quick Start Guide:
+Quick Start Guide
 
 All examples assume
 
 #include “OutputChannels.h”
 
-To define an OutputStream of char type called gMyStream with encapsulated buffer, writing to standard output (std::cout) with no message prefixing:
+ To define an OutputStream of char type called gMyStream with encapsulated buffer, writing to standard output (std::cout) with no message prefixing:
 
 using namespace mbp::streams;
 
@@ -64,7 +70,7 @@ using namespace mbp::streams;
 
 gOut << Priority(INFO) << “going to main stream again providing filter is currently (INFO) or lower” << endl;
 
-INFO above is an integer alias, perhaps a define or enum – that is up to client to define. 0 = highest Priority in OutputStreams, therefore a manipulator or function call to 'Filter(2)' will stop any message with 'Priority(3)' or greater from reaching the final OutputTarget (which here is std::cout). Priority(x) calls last until the buffer is next flushed via flush/endl manipulators or explicit function call, at which time Priority is reset to that stream or channel's current DefaultPriority (which is 0 at construction with GetDefaultStreamSettings() and changeable itself via a manipulator or function call).
+INFO above represents an integer alias, perhaps a define or enum – that is up to the library client to define. 0 = highest Priority in OutputStreams, therefore a manipulator or function call to 'Filter(2)' will stop any message with 'Priority(3)' or greater from reaching the final OutputTarget (which here is std::cout). Priority(x) calls last until the buffer is next flushed via flush/endl manipulators or explicit function call, at which time Priority is reset to that stream or channel's current DefaultPriority (which is 0 at construction with GetDefaultStreamSettings() and changeable itself via a manipulator or function call).
 
 Changing gOut to be a channel for multi-threaded use is easy enough:
 
@@ -78,11 +84,13 @@ For my own diagnostics / general output whilst developing, I tend to use one Out
 
 extern thread_local Stream_t< char >& gDbgOut;
 
-That reference is connected up to the thread_local channel at point of definition much like the stream example. Streams and channels both derive (statically) from STREAMBASE< CHAR_TYPE > - in this case Stream_t< char > so the reference can be pointed at either object.
+That reference is connected up to the thread_local channel at point of definition much like the stream example. Streams and channels both derive from STREAMBASE< CHAR_TYPE > - in this case Stream_t< char > so the reference can be pointed at either object.
 
 Finally...
 
 A reminder that OutputStreams is licenced under the MIT license, a copy of which is included with the source distribution.
+
+I hope you find the library useful.
 
 I hope you find the library useful.
 
