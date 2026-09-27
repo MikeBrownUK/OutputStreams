@@ -11,7 +11,7 @@
 ///				 also very useful for general stream to stream applications, especially with its inbuilt char-type conversion options.
 ///				 
 /// #define OUTPUT_STREAM_STRIP will replace all OutputStream library objects with proxy empty classes
-///			(giving compile time disable with compiler code-strip and literal removal in optimal conditions)
+///			(giving compile time disable with compiler code-strip and literal removals in optimal conditions)
 ///
 //////////////////////////////////////////////////////////////////////////
 
@@ -84,7 +84,7 @@ namespace mbp
 		};
 
 		// The default StreamSettings instance
-		extern StreamSettings & GetDefaultChannelSettings();
+		extern StreamSettings & GetDefaultStreamSettings();
 
 		// flags cleared by the OutputStream destructor
 		extern void ** GetSharedStreamArray();
@@ -229,7 +229,7 @@ namespace mbp
 			using elem = ELEM_;
 			using base = std::basic_stringbuf< elem, std::char_traits< elem >, std::allocator< ELEM_ > >;
 
-			BasicBuffer_t( OutputTarget& target_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			BasicBuffer_t( OutputTarget& target_, StreamSettings& initSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: std::basic_stringbuf< ELEM_, std::char_traits< ELEM_ >, std::allocator< ELEM_ > >( )
 				, m_outputTarget( target_ )
 				, m_stamp( stamp_ )
@@ -361,7 +361,7 @@ namespace mbp
 		public:
 			using elem = typename TARGET_::elem;
 			using base = BasicBuffer_t< elem >;
-			OutputBuffer_t( char const * const fileName_ = nullptr, StreamSettings& initialSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			OutputBuffer_t( char const * const fileName_ = nullptr, StreamSettings& initialSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: BasicBuffer_t< elem >( m_outputTarget, initialSettings_, stamp_ )
 				, m_outputTarget( fileName_ )
 			{
@@ -380,7 +380,7 @@ namespace mbp
 		public:
 			using elem = ELEM_;
 			using base = BasicBuffer_t< elem >;
-			NoOutput_t( StreamSettings& initialSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			NoOutput_t( StreamSettings& initialSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: BasicBuffer_t< elem >( m_dummyTarget, initialSettings_, stamp_ )
 			{
 			}
@@ -476,7 +476,7 @@ namespace mbp
 		class OutputStreamComplete_t : public OutputStream_t< U_ >
 		{
 		public:
-			OutputStreamComplete_t( char const* const initString_ = nullptr, StreamSettings& settings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			OutputStreamComplete_t( char const* const initString_ = nullptr, StreamSettings& settings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: OutputStream_t< U_ >( &m_buffer )
 				, m_buffer( initString_, settings_, stamp_ )
 			{
@@ -490,14 +490,14 @@ namespace mbp
 		class NoOutputStreamComplete_t : public OutputStream_t< U_ >
 		{
 		public:
-			NoOutputStreamComplete_t( StreamSettings& settings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			NoOutputStreamComplete_t( StreamSettings& settings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: OutputStream_t< U_ >( &m_buffer )
-				, m_buffer( settings_, stamp_ )
+				, m_buffer( "", settings_, stamp_ )
 			{
 			}
 			virtual ~NoOutputStreamComplete_t() = default;
 		private:
-			 T_ m_buffer;
+			OutputBuffer_t< T_ > m_buffer;
 		};
 
 		//////////////////////////////////////////////////////////////////////////
@@ -922,7 +922,7 @@ namespace mbp
 		class OutputBuffer_t : public BasicBuffer_t< typename T_::elem >
 		{
 		public:
-			OutputBuffer_t( char const* const fileName_ = nullptr, StreamSettings& initialSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			OutputBuffer_t( char const* const fileName_ = nullptr, StreamSettings& initialSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 			{}
 		};
 
@@ -1037,7 +1037,7 @@ namespace mbp
 		class OutputStreamComplete_t : public U_
 		{
 		public:
-			OutputStreamComplete_t( char const* const initString_ = nullptr, StreamSettings& settings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			OutputStreamComplete_t( char const* const initString_ = nullptr, StreamSettings& settings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 			{
 			}
 		};
@@ -1046,7 +1046,7 @@ namespace mbp
 		class NoOutputStreamComplete_t : public U_
 		{
 		public:
-			NoOutputStreamComplete_t( StreamSettings& settings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			NoOutputStreamComplete_t( StreamSettings& settings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 			{
 			}
 		};
