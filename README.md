@@ -46,7 +46,7 @@ All examples assume
 
 using namespace mbp::streams;
 
-OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > gMyStream( GetDefaultChannelSettings(), OutputStamp::GetDummyStamp() );
+OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > gMyStream( "", GetDefaultStreamSettings(), OutputStamp::GetDummyStamp() );
 
 The above constructs a stream object using default stream settings. Everything will be passed to output until/if you change filter and priority options and no prefixes will be added to your output. Some of the construction parameters are defaults and can be ommited, but they are given explicitly above so it's obvious where to change to add different message prefixes or pass in different initial settings.
 
