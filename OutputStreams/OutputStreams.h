@@ -324,7 +324,7 @@ namespace mbp
 						}
 					}
 					else
-						m_cToNext = base::pptr() - base::pbase();	// update count but don't output
+						m_cToNext = static_cast< int >( base::pptr() - base::pbase() );	// update count but don't output
 				}
 				base::pbump( m_cToNext - static_cast< int >( base::pptr() - base::pbase() ) );
 				return 0;
@@ -372,34 +372,6 @@ namespace mbp
 			OutputBuffer_t( OutputBuffer_t const & rhs_ ) = delete;
 			OutputBuffer_t & operator = ( OutputBuffer_t const & rhs_ ) = delete;
 			TARGET_ m_outputTarget;
-		};
-
-		template < typename ELEM_ >
-		class NoOutput_t : public BasicBuffer_t< ELEM_ >
-		{
-		public:
-			using elem = ELEM_;
-			using base = BasicBuffer_t< elem >;
-			NoOutput_t( StreamSettings& initialSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
-				: BasicBuffer_t< elem >( m_dummyTarget, initialSettings_, stamp_ )
-			{
-			}
-			virtual int flush( bool bIsStreamFlush = false ) override
-			{
-				return 0;
-			}
-			virtual int sync() override
-			{
-				// just empty
-				base::pbump( -static_cast< int >( base::pptr() - base::pbase() ) );
-				return 0;
-			}
-			virtual ~NoOutput_t() = default;
-
-		private:
-			NoOutput_t( NoOutput_t const& rhs_ ) = delete;
-			NoOutput_t& operator = ( NoOutput_t const& rhs_ ) = delete;
-			OutputTarget m_dummyTarget;
 		};
 
 
@@ -718,7 +690,6 @@ namespace mbp
 		template< typename T_, typename U_ >
 		Stream_t< T_ >& operator << ( Stream_t< T_ >& stream_, U_ const& obj_ )
 		{
-
 			std::basic_ostream< T_, std::char_traits< T_ > >& baseCast = static_cast< std::basic_ostream< T_, std::char_traits< T_ > >& >( stream_ );
 			baseCast << obj_;
 			return stream_;

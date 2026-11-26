@@ -37,6 +37,21 @@ namespace mbp
 			virtual void Output( void const* output_, uint32_t numCharacters_, uint32_t numBytes_ ) {}
 		};
 
+		// Outputtarget that doesn't output on a flush (mainly for optimising conversion flow)
+		template < typename ELEM_ >
+		class NoOutput_t : public OutputTarget
+		{
+		public:
+			using elem = ELEM_;
+			virtual ~NoOutput_t() = default;
+			virtual void Output( void const* output_, uint32_t numCharacters_, uint32_t numBytes_ ) {}
+			NoOutput_t( char const* const initString_ )
+				: OutputTarget()
+			{
+			}
+
+		};
+
 		// Output to a File
 		template< typename ELEM_ >
 		class OutputFile_t : public OutputTarget
