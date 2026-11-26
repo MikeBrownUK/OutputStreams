@@ -372,7 +372,7 @@ TEST( InitAndCleanupTests, CheckMany )
 		OutputStreamComplete_t< OutputFile_t< char32_t >, Stream_t< char32_t > > out32File( kUTF32Filename );
 		OutputStreamComplete_t< OutputStdOut_t< char32_t >, ConvertingStream_t< char32_t > > out32StdOut;
 		StreamList< char32_t > connectorMulti{ &out32File, &out32StdOut };
-		OutputChannelComplete_t< ConvertingStream_t< char32_t >, true > multiThreadMultiOut( 0, connectorMulti, GetDefaultChannelSettings(), SystemTimeStamp_t< char32_t >::GetInstance() );
+		OutputChannelComplete_t< ConvertingStream_t< char32_t >, true > multiThreadMultiOut( 0, connectorMulti, GetDefaultStreamSettings(), SystemTimeStamp_t< char32_t >::GetInstance() );
 
 		outCharSingle << "Multi Channel cleanup test ... " << 4.965 << ", " << 16384 << std::endl;
 		multiThreadMultiOut << U"UTF32 test" << std::endl;
@@ -733,12 +733,12 @@ TEST( GeneralTests, CheckOutputStamps )
 	bool allOK;
 	uint8_t * flagsReference = GetChannelInitFlags();
 
-	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamOne( nullptr, GetDefaultChannelSettings(), SystemTimeStamp_t< char >::GetInstance() );
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamOne( nullptr, GetDefaultStreamSettings(), SystemTimeStamp_t< char >::GetInstance() );
 	StreamList< char > connectorOne{ &streamOne };
 	streamOne << "Stream One writing to std::out before channels attached" << std::endl;
 	{
-		OutputChannelComplete_t< Stream_t< char >, false > channelOne( DEFAULT, connectorOne, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
-		OutputChannelComplete_t< Stream_t< char >, false > channelTwo( DEFAULT, connectorOne, GetDefaultChannelSettings() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelOne( DEFAULT, connectorOne, GetDefaultStreamSettings(), SystemTimeStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelTwo( DEFAULT, connectorOne, GetDefaultStreamSettings() );
 		channelOne << "Channel One writing to std::out via Stream One using its own Timestamp" << std::endl;
 		streamOne << "Writing to Stream One directly with channels in use. This is safe in single thread mode. Timestamp will not appear though, as stream is currently flagged as in use by OutputChannels." << std::endl;
 		channelTwo << "Channel Two is a proxy using same channel ID and connector so I don't have to set up threads but with no Timestamp, also using Stream One" << std::endl;
@@ -758,7 +758,7 @@ TEST( GeneralTests, CheckOutputStamps )
 
 void SameIDThreadFunc( int threadNumber_, int channelNumber_, StreamList< char > const & connector_, OutputStamp&& stamp_, size_t msToRun_ )
 {
-	OutputChannelComplete_t< Stream_t< char >, true > channel( channelNumber_, connector_, GetDefaultChannelSettings(), stamp_ );
+	OutputChannelComplete_t< Stream_t< char >, true > channel( channelNumber_, connector_, GetDefaultStreamSettings(), stamp_ );
 
 	system_clock::time_point start = system_clock::now();
 	system_clock::time_point wait = start + std::chrono::milliseconds( msToRun_ );
@@ -774,10 +774,10 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 	uint8_t * flagsReference = GetChannelInitFlags();
 
 	// define three different streams
-	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamOne( nullptr, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamOne( nullptr, GetDefaultStreamSettings(), SystemTimeStamp_t<char>::GetInstance() );
 	// this one uses the LineStamp example class just to test a variable length stamp prefix
-	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamTwo( nullptr, GetDefaultChannelSettings(), LineStamp_t<char>::GetInstance() );
-	OutputStreamComplete_t< OutputFile_t< char >, Stream_t< char > > streamThree( kNarrowFilename, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > streamTwo( nullptr, GetDefaultStreamSettings(), LineStamp_t<char>::GetInstance() );
+	OutputStreamComplete_t< OutputFile_t< char >, Stream_t< char > > streamThree( kNarrowFilename, GetDefaultStreamSettings(), SystemTimeStamp_t<char>::GetInstance() );
 	
 	// define two connectors to link the streams to channels. Both go to std::out via different streams, but one additionally sends to a file 
 	StreamList< char > connectorOne{ &streamOne };	
@@ -807,11 +807,11 @@ TEST( GeneralTests, SameChannelIDsDifferentParams )
 	{
 		// create two channels using same channel ID but writing to different streams via their connectors
 		// The expected behaviour here is that they share channel filter flags but do not otherwise interfere with each other.
-		OutputChannelComplete_t< Stream_t< char >, false > channelOne( DEFAULT, connectorOne, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelOne( DEFAULT, connectorOne, GetDefaultStreamSettings(), SystemTimeStamp_t<char>::GetInstance() );
 		// same ID, different stream list, though both ultimately go to std::out by design
-		OutputChannelComplete_t< Stream_t< char >, false > channelTwo( DEFAULT, connectorTwo, GetDefaultChannelSettings(), SystemTimeStamp_t<char>::GetInstance() );
-		OutputChannelComplete_t< Stream_t< char >, false > channelThree( DEFAULT, connectorOne, GetDefaultChannelSettings(), LineStamp_t<char>::GetInstance() );
-		OutputChannelComplete_t< Stream_t< char >, false > channelFour( DEFAULT, connectorTwo, GetDefaultChannelSettings(), LineStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelTwo( DEFAULT, connectorTwo, GetDefaultStreamSettings(), SystemTimeStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelThree( DEFAULT, connectorOne, GetDefaultStreamSettings(), LineStamp_t<char>::GetInstance() );
+		OutputChannelComplete_t< Stream_t< char >, false > channelFour( DEFAULT, connectorTwo, GetDefaultStreamSettings(), LineStamp_t<char>::GetInstance() );
 		channelOne << "Channel One..." << std::endl;
  		channelTwo << "Channel Two, different stream but same ultimate target" << std::endl;
 		// filter out everything

@@ -55,7 +55,7 @@ namespace mbp
 			using elem = typename STREAMBASE_::elem;
 			using base = STREAMBASE_;
 
-			OutputChannel_t( BasicBuffer_t< elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< elem > * > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultChannelSettings(), bool bCleanupBuffer = false )
+			OutputChannel_t( BasicBuffer_t< elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< elem > * > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultStreamSettings(), bool bCleanupBuffer = false )
 				: STREAMBASE_( pBuffer_ )
 				, m_channelId( channelID_ )
 				, m_sharedStreams( streams_ )
@@ -340,7 +340,7 @@ namespace mbp
 		class OutputChannelComplete_t : public OutputChannel_t< T_ >
 		{
 		public:
-			OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 				: OutputChannel_t< T_ >( &m_buffer, channelID_, streams_, MULTITHREAD_, initSettings_ )
 				, m_buffer( channelID_, streams_, stamp_ )
 			{
@@ -364,7 +364,7 @@ namespace mbp
 		class OutputChannel_t : public OutputStream_t< T_ >
 		{
 		public:
-			OutputChannel_t( ChannelBuffer_t< typename T_::elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultChannelSettings(), bool bCleanupBuffer = false )
+			OutputChannel_t( ChannelBuffer_t< typename T_::elem >* pBuffer_, int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, bool isMultiThreadChannel_ = true, StreamSettings& initSettings_ = GetDefaultStreamSettings(), bool bCleanupBuffer = false )
 				: OutputStream_t< T_ >( pBuffer_ )
 			{
 			}
@@ -374,7 +374,7 @@ namespace mbp
 		class OutputChannelComplete_t : public T_
 		{
 		public:
-			inline OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultChannelSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
+			inline OutputChannelComplete_t( int channelID_, std::vector< BasicStream_t< typename T_::elem >* > const& streams_, StreamSettings& initSettings_ = GetDefaultStreamSettings(), OutputStamp& stamp_ = OutputStamp::GetDummyStamp() )
 			{
 			}
 		};

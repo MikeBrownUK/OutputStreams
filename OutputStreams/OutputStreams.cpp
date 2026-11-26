@@ -21,7 +21,7 @@ namespace mbp
 		// Default ChannelSettings for Streams and Channels
 		//////////////////////////////////////////////////////////////////////////
 
-		StreamSettings & GetDefaultChannelSettings()
+		StreamSettings & GetDefaultStreamSettings()
 		{
 			static StreamSettings kDefaultSettings
 			{

@@ -89,7 +89,7 @@ class ThreadTester : public TestUsingFiles
 {
 protected:
 	ThreadTester()
-		: m_output( "", GetDefaultChannelSettings(), OutputStamp::GetDummyStamp() )
+		: m_output( "", GetDefaultStreamSettings(), OutputStamp::GetDummyStamp() )
 		, m_connector{ &m_output }
 	{}
 	OutputStreamComplete_t< OutputStdOut_t< char >, Stream_t< char > > m_output;
